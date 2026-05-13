@@ -1,10 +1,10 @@
 import { apiGet, apiPost } from "@/lib/api";
 
 const ENDPOINTS = {
-  profile: "/profile",
-  skills: "/skills",
-  projects: "/projects",
-  contact: "/contact",
+  profile: "/api/profile",
+  skills: "/api/skills",
+  projects: "/api/projects",
+  contact: "/api/contact",
 };
 
 export async function getProfile() {
@@ -12,17 +12,17 @@ export async function getProfile() {
 }
 
 export async function getSkills() {
-  // Expected backend: GET /skills
+  // Expected backend: GET /api/skills
   return apiGet(ENDPOINTS.skills);
 }
 
 export async function getProjects() {
-  // Expected backend: GET /projects
+  // Expected backend: GET /api/projects
   return apiGet(ENDPOINTS.projects);
 }
 
 export async function submitContact({ name, email, message }) {
-  // Expected backend: POST /contact
+  // Expected backend: POST /api/contact
   return apiPost(ENDPOINTS.contact, { name, email, message });
 }
 
