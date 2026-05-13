@@ -7,20 +7,6 @@ import TypingEffect from "@/components/TypingEffect";
 import { ArrowRight, Download } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
 
-function downloadCvTxt() {
-  const contents = `DICKENS DEUS MANYAMA\nSoftware Developer | Data Scientist | IT Systems & Networking\n\nEmail: dickensmanyama8@gmail.com\nPhone: 0679 165 468, 0692 501 112\nGitHub: https://github.com/Dickens-Manyama\nLinkedIn: https://www.linkedin.com/in/dickens-manyama-560450327\n\nReplace this text with your real CV PDF later.`;
-  const blob = new Blob([contents], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Dickens-Manyama-CV.txt";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function HeroSection({ profile }) {
   const name = profile?.name ?? "DICKENS DEUS MANYAMA";
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
@@ -80,14 +66,14 @@ export function HeroSection({ profile }) {
                 <ArrowRight className="transition group-hover:translate-x-0.5" size={18} />
               </a>
 
-              <button
-                type="button"
-                onClick={downloadCvTxt}
+              <a
+                href="/Dickens_Manyama_CV.pdf"
+                download
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
               >
                 <Download size={18} />
                 Download CV
-              </button>
+              </a>
 
               <a
                 href="#contact"
