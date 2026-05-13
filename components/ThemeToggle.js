@@ -3,14 +3,23 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
+const THEME_KEY = "theme";
+
+function applyTheme(nextTheme) {
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(nextTheme);
+}
+
 export default function ThemeToggle() {
   const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("theme");
-    const next = stored === "light" || stored === "dark" ? stored : "dark";
+    const stored = window.localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = stored === "light" || stored === "dark" ? stored : prefersDark ? "dark" : "light";
     setTheme(next);
-    document.documentElement.classList.toggle("dark", next === "dark");
+    applyTheme(next);
   }, []);
 
   return (
@@ -19,8 +28,8 @@ export default function ThemeToggle() {
       onClick={() => {
         const next = theme === "dark" ? "light" : "dark";
         setTheme(next);
-        document.documentElement.classList.toggle("dark", next === "dark");
-        window.localStorage.setItem("theme", next);
+        applyTheme(next);
+        window.localStorage.setItem(THEME_KEY, next);
       }}
       className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 backdrop-blur-md transition hover:bg-white/10 hover:border-white/20"
       aria-label="Toggle dark/light theme"

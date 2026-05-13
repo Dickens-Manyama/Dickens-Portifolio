@@ -7,7 +7,80 @@ html {
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 font-sans;
+  @apply bg-slate-50 text-slate-900 font-sans;
+}
+
+html.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Light theme overrides for common dark-first utility classes. */
+html.light .text-white {
+  color: rgb(15 23 42);
+}
+
+html.light .text-white\/95 {
+  color: rgba(15, 23, 42, 0.95);
+}
+
+html.light .text-slate-100 {
+  color: rgb(15 23 42);
+}
+
+html.light .text-slate-200 {
+  color: rgb(51 65 85);
+}
+
+html.light .text-slate-300 {
+  color: rgb(71 85 105);
+}
+
+html.light .text-slate-400 {
+  color: rgb(100 116 139);
+}
+
+html.light .text-indigo-300 {
+  color: rgb(79 70 229);
+}
+
+html.light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+html.light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.18);
+}
+
+html.light .bg-slate-950\/25 {
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+html.light .bg-slate-950\/30 {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+html.light .bg-slate-950\/60 {
+  background-color: rgba(248, 250, 252, 0.7);
+}
+
+html.light .bg-slate-950\/70 {
+  background-color: rgba(248, 250, 252, 0.75);
 }
 
 /* Improve readability of glass cards */
