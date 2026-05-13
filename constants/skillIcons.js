@@ -1,29 +1,15 @@
-import {
-  Code2,
-  Database,
-  FlaskConical,
-  Network,
-  Server,
-  Zap,
-  Workflow,
-  Layers,
-  Puzzle,
-  Terminal,
-  Cpu,
-} from "lucide-react";
-
-// Map of simple icon keys to Lucide React components.
+// Map of simple icon keys to Bootstrap icon class names.
 export const SKILL_ICONS = {
-  code: Code2,
-  database: Database,
-  ai: FlaskConical,
-  networking: Network,
-  server: Server,
-  automation: Zap,
-  workflows: Workflow,
-  cloud: Layers,
-  sql: Terminal,
-  python: Cpu,
-  js: Puzzle,
+  code: "bi-code-slash",
+  database: "bi-database",
+  ai: "bi-cpu",
+  networking: "bi-diagram-3",
+  server: "bi-hdd-network",
+  automation: "bi-gear",
+  workflows: "bi-diagram-3",
+  cloud: "bi-cloud",
+  sql: "bi-database",
+  python: "bi-filetype-py",
+  js: "bi-filetype-js",
 };
 

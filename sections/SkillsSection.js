@@ -7,7 +7,7 @@ import { SKILL_ICONS } from "@/constants/skillIcons";
 import { SkeletonCard } from "@/components/SkeletonCard";
 
 function SkillProgress({ name, level, iconKey }) {
-  const Icon = SKILL_ICONS[iconKey] ?? SKILL_ICONS.code;
+  const iconClass = SKILL_ICONS[iconKey] ?? SKILL_ICONS.code;
 
   return (
     <motion.div
@@ -20,7 +20,7 @@ function SkillProgress({ name, level, iconKey }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-            <Icon size={18} className="text-indigo-200" />
+            <i className={`bi ${iconClass} text-indigo-200 text-[18px]`} aria-hidden="true" />
           </div>
           <p className="text-sm font-semibold text-white/95">{name}</p>
         </div>

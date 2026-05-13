@@ -4,7 +4,7 @@ export const metadata = {
   title: "Dickens Manyama | Portfolio",
   description: "Software Developer & Data Scientist portfolio",
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.svg",
   },
 };
 
