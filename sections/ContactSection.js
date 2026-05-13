@@ -42,15 +42,24 @@ export function ContactSection({ profile }) {
     setStatus({ type: "idle", text: "" });
 
     try {
-      const res = await submitContact({ name: name.trim(), email: contactEmail.trim(), message: message.trim() });
-      setStatus({ type: "success", text: res?.message ?? "Thanks! Your message was received." });
+      const res = await submitContact({
+        name: name.trim(),
+        email: contactEmail.trim(),
+        message: message.trim(),
+      });
+      if (!res?.success) {
+        throw new Error(res?.message || "Something went wrong. Please try again.");
+      }
+
+      setStatus({ type: "success", text: res?.message ?? "Message sent successfully." });
       setName("");
       setContactEmail("");
       setMessage("");
     } catch (err) {
+      const messageText = err?.data?.message || err?.message || "Something went wrong. Please try again.";
       setStatus({
         type: "error",
-        text: err?.message ?? "Something went wrong. Please try again.",
+        text: messageText,
       });
     } finally {
       setSubmitting(false);

@@ -16,6 +16,11 @@ export function useFetchPortfolioData() {
       setProfile(p);
       setSkills(s);
       setProjects(pr);
+    } catch (err) {
+      console.error("[portfolio] Failed to load data:", err?.message || err);
+      setProfile(null);
+      setSkills(null);
+      setProjects(null);
     } finally {
       setLoading(false);
     }
