@@ -97,8 +97,8 @@ export function HeroSection({ profile }) {
               </a>
 
               <a
-                href="/Dickens_Manyama_CV.pdf"
-                download
+                href={profile?.cvUrl || "/Dickens_Manyama_CV.pdf"}
+                download={profile?.cvOriginalName || undefined}
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
               >
                 <Download size={18} />

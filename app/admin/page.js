@@ -108,6 +108,7 @@ export default function AdminPage() {
   const [cvEditing, setCvEditing] = useState(false);
   const [cvEditContent, setCvEditContent] = useState("");
   const [cvFileName, setCvFileName] = useState("");
+  const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
 
@@ -353,19 +354,29 @@ export default function AdminPage() {
       return;
     }
 
+    // Store selected file and wait for explicit upload
+    setSelectedCvFile(file);
+    setCvFileName(file.name);
+    setStatus({ type: "success", text: "CV ready to upload. Click 'Upload CV' to save." });
+    event.target.value = "";
+  }
+
+  async function handleCvUpload() {
+    if (!selectedCvFile) return setStatus({ type: "error", text: "No file selected." });
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
     setLoading(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
-      const payload = { filename: file.name, contentBase64: dataUrl };
+      const dataUrl = await fileToDataUrl(selectedCvFile);
+      const payload = { filename: selectedCvFile.name, contentBase64: dataUrl };
       const saved = await adminUploadCv(payload, token);
       setCvMeta(saved || null);
+      setSelectedCvFile(null);
+      setCvFileName("");
       setStatus({ type: "success", text: "CV uploaded." });
-      setCvFileName(file.name);
     } catch (err) {
       setStatus({ type: "error", text: err?.message || "Failed to upload CV." });
     } finally {
       setLoading(false);
-      event.target.value = "";
     }
   }
 
@@ -864,6 +875,13 @@ export default function AdminPage() {
                               onChange={handleCvFileSelect}
                               className="block rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
                             />
+                            {selectedCvFile ? (
+                              <div className="ml-3 flex items-center gap-2">
+                                <span className="text-sm text-slate-200">{selectedCvFile.name}</span>
+                                <button onClick={handleCvUpload} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Upload CV</button>
+                                <button onClick={() => { setSelectedCvFile(null); setCvFileName(""); setStatus({type:'idle', text:''}); }} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Cancel</button>
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="mt-3 flex items-center gap-2">
