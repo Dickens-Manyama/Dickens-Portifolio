@@ -22,6 +22,10 @@ import {
   adminGetContacts,
   adminDeleteContact,
   adminGetSession,
+  adminGetCvMetadata,
+  adminUploadCv,
+  adminDeleteCv,
+  adminGetCvContent,
   getAdminToken,
   setAdminToken,
   clearAdminToken,
@@ -100,6 +104,10 @@ export default function AdminPage() {
   const [education, setEducation] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [profileImageFileName, setProfileImageFileName] = useState("");
+  const [cvMeta, setCvMeta] = useState(null);
+  const [cvEditing, setCvEditing] = useState(false);
+  const [cvEditContent, setCvEditContent] = useState("");
+  const [cvFileName, setCvFileName] = useState("");
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
 
@@ -222,6 +230,12 @@ export default function AdminPage() {
       setSkills(skillRows || []);
       setEducation(educationRows || []);
       setContacts(contactRows || []);
+      try {
+        const meta = await adminGetCvMetadata(token);
+        setCvMeta(meta || null);
+      } catch (e) {
+        setCvMeta(null);
+      }
       resetSessionClock(sessionTimeoutMs);
     } catch (err) {
       if (err?.status === 401) {
@@ -325,6 +339,85 @@ export default function AdminPage() {
       setStatus({ type: "error", text: err?.message || "Failed to load image." });
     } finally {
       event.target.value = "";
+    }
+  }
+
+  async function handleCvFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+
+    if (file.size > 12 * 1024 * 1024) {
+      setStatus({ type: "error", text: "CV must be 12 MB or smaller." });
+      event.target.value = "";
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const payload = { filename: file.name, contentBase64: dataUrl };
+      const saved = await adminUploadCv(payload, token);
+      setCvMeta(saved || null);
+      setStatus({ type: "success", text: "CV uploaded." });
+      setCvFileName(file.name);
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to upload CV." });
+    } finally {
+      setLoading(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleCvDelete() {
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    const confirmed = window.confirm("Delete current CV? This cannot be undone.");
+    if (!confirmed) return;
+    setLoading(true);
+    try {
+      await adminDeleteCv(token);
+      setCvMeta(null);
+      setStatus({ type: "success", text: "CV deleted." });
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to delete CV." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCvEditOpen() {
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    setLoading(true);
+    try {
+      const data = await adminGetCvContent(token);
+      setCvEditContent(data.content || "");
+      setCvEditing(true);
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to open CV for editing." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function textToDataUrl(text, filename) {
+    const b64 = typeof window !== "undefined" ? window.btoa(unescape(encodeURIComponent(text))) : Buffer.from(text, 'utf8').toString('base64');
+    return `data:text/plain;base64,${b64}`;
+  }
+
+  async function handleCvSaveEdit() {
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    setLoading(true);
+    try {
+      const filename = cvMeta?.originalName || (cvFileName || `cv-${Date.now()}.md`);
+      const dataUrl = textToDataUrl(cvEditContent, filename);
+      const saved = await adminUploadCv({ filename, contentBase64: dataUrl }, token);
+      setCvMeta(saved || null);
+      setCvEditing(false);
+      setStatus({ type: "success", text: "CV saved." });
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to save CV." });
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -760,6 +853,37 @@ export default function AdminPage() {
                           </p>
                         </div>
 
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                          <p className="font-semibold text-white/95">Curriculum Vitae (CV)</p>
+                          <p className="mt-2 text-xs text-slate-400">Upload a PDF, DOCX, TXT or Markdown file for visitors to download.</p>
+
+                          <div className="mt-3 flex items-center gap-2">
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.txt,.md"
+                              onChange={handleCvFileSelect}
+                              className="block rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                            />
+                          </div>
+
+                          <div className="mt-3 flex items-center gap-2">
+                            {cvMeta?.url ? (
+                              <a href={cvMeta.url} target="_blank" rel="noreferrer" className="text-indigo-300 underline text-sm">
+                                View current CV
+                              </a>
+                            ) : (
+                              <span className="text-xs text-slate-400">No CV uploaded</span>
+                            )}
+
+                            {cvMeta ? (
+                              <>
+                                <button onClick={handleCvEditOpen} className="ml-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Edit</button>
+                                <button onClick={handleCvDelete} className="ml-2 rounded-xl border border-white/10 bg-rose-600/10 px-3 py-1 text-xs text-rose-200 hover:bg-rose-600/20">Delete</button>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+
                         <p className="text-xs leading-relaxed text-slate-400">
                           The chosen image is resized before saving so the profile update stays small.
                         </p>
@@ -1128,6 +1252,20 @@ export default function AdminPage() {
           )}
         </div>
       </Container>
+      {cvEditing ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-3xl rounded-2xl bg-slate-900 p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Edit CV</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCvEditing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">Cancel</button>
+                <button onClick={handleCvSaveEdit} className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Save</button>
+              </div>
+            </div>
+            <textarea value={cvEditContent} onChange={(e) => setCvEditContent(e.target.value)} rows={20} className="mt-4 w-full rounded-xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

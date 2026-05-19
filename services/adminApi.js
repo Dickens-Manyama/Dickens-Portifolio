@@ -136,3 +136,19 @@ export async function adminDeleteContact(id, token) {
 export async function adminGetSession(token) {
   return adminFetch("/api/admin/session", { token });
 }
+
+export async function adminGetCvMetadata(token) {
+  return adminFetch("/api/admin/cv", { token });
+}
+
+export async function adminUploadCv(payload, token) {
+  return adminFetch("/api/admin/cv", { method: "POST", body: payload, token });
+}
+
+export async function adminDeleteCv(token) {
+  return adminFetch("/api/admin/cv", { method: "DELETE", token });
+}
+
+export async function adminGetCvContent(token) {
+  return adminFetch("/api/admin/cv/content", { token });
+}
