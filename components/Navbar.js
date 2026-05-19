@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 import { SECTIONS } from "@/constants/sections";
 import SmoothScrollLink from "@/components/SmoothScrollLink";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -54,6 +55,13 @@ export default function Navbar({ loading = false }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin"
+            className="hidden rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-indigo-300/50 hover:bg-indigo-400/10 md:inline-flex"
+          >
+            Admin Login
+          </Link>
+
           <div className="hidden lg:block">
             <ThemeToggle />
           </div>
@@ -92,6 +100,13 @@ export default function Navbar({ loading = false }) {
                     {item.label}
                   </SmoothScrollLink>
                 ))}
+
+                <Link
+                  href="/admin"
+                  className="mt-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-indigo-300/50 hover:bg-indigo-400/10"
+                >
+                  Admin Login
+                </Link>
               </div>
             </Container>
           </motion.div>

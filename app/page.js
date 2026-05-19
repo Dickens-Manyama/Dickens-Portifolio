@@ -13,7 +13,7 @@ import { ContactSection } from "@/sections/ContactSection";
 import { useFetchPortfolioData } from "@/hooks/useFetchPortfolioData";
 
 export default function HomePage() {
-  const { loading, profile, skills, projects } = useFetchPortfolioData();
+  const { loading, profile, skills, projects, education } = useFetchPortfolioData();
 
   return (
     <div className="relative min-h-screen">
@@ -25,7 +25,7 @@ export default function HomePage() {
         <AboutSection profile={profile} />
         <SkillsSection skills={skills} loading={loading} />
         <ProjectsSection projects={projects} loading={loading} />
-        <EducationSection />
+        <EducationSection education={education} loading={loading} />
         <ContactSection profile={profile} />
       </main>
 

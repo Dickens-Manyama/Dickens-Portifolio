@@ -5,7 +5,8 @@ import Reveal from "@/components/Reveal";
 import { motion } from "framer-motion";
 import { GraduationCap } from "lucide-react";
 
-export function EducationSection() {
+export function EducationSection({ education, loading }) {
+  const items = education ?? [];
   return (
     <section id="education" className="py-16 md:py-20">
       <Container>
@@ -36,51 +37,39 @@ export function EducationSection() {
           <div className="lg:col-span-7">
             <div className="relative pl-6">
               <div className="absolute left-3 top-2 bottom-2 w-px bg-white/10" />
-
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true, amount: 0.25 }}
-                className="relative mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-              >
-                <div className="absolute left-[-1.2rem] top-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-                  <span className="h-2 w-2 rounded-full bg-indigo-300" />
+              {loading ? (
+                <div className="space-y-6">
+                  {new Array(3).fill(0).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="h-20 rounded-3xl border border-white/10 bg-white/5 p-5"
+                    />
+                  ))}
                 </div>
-                <p className="text-sm font-semibold text-white/95">EASTC</p>
-                <p className="mt-1 text-sm text-slate-300">Eastern Africa Statistical Training Centre</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.05 }}
-                viewport={{ once: true, amount: 0.25 }}
-                className="relative mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-              >
-                <div className="absolute left-[-1.2rem] top-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-                  <span className="h-2 w-2 rounded-full bg-violet-300" />
-                </div>
-                <p className="text-sm font-semibold text-white/95">Bachelor of Science in Data Science</p>
-                <p className="mt-1 text-sm text-slate-300">Core data science coursework + practical projects</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true, amount: 0.25 }}
-                className="relative rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-              >
-                <div className="absolute left-[-1.2rem] top-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-                  <span className="h-2 w-2 rounded-full bg-cyan-300" />
-                </div>
-                <p className="text-sm font-semibold text-white/95">Final Year Status</p>
-                <p className="mt-1 text-sm text-slate-300">Machine learning + ML-ready engineering mindset</p>
-                <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
-                  In progress / final-year stage
-                </div>
-              </motion.div>
+              ) : (
+                items.map((item, idx) => (
+                  <motion.div
+                    key={`${item.institution}-${item.program}-${idx}`}
+                    initial={{ opacity: 0, x: -10 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: idx * 0.05 }}
+                    viewport={{ once: true, amount: 0.25 }}
+                    className="relative mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
+                  >
+                    <div className="absolute left-[-1.2rem] top-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
+                      <span className="h-2 w-2 rounded-full bg-indigo-300" />
+                    </div>
+                    <p className="text-sm font-semibold text-white/95">{item.institution}</p>
+                    <p className="mt-1 text-sm text-slate-300">{item.program}</p>
+                    <p className="mt-2 text-xs text-slate-400">{item.description}</p>
+                    {item.statusTag ? (
+                      <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                        {item.statusTag}
+                      </div>
+                    ) : null}
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         </div>

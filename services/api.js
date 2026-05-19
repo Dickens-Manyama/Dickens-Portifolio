@@ -4,6 +4,7 @@ const ENDPOINTS = {
   profile: "/api/profile",
   skills: "/api/skills",
   projects: "/api/projects",
+  education: "/api/education",
   contact: "/api/contact",
 };
 
@@ -19,6 +20,10 @@ export async function getSkills() {
 export async function getProjects() {
   // Expected backend: GET /api/projects
   return apiGet(ENDPOINTS.projects);
+}
+
+export async function getEducation() {
+  return apiGet(ENDPOINTS.education);
 }
 
 export async function submitContact({ name, email, message }) {
