@@ -20,6 +20,8 @@ import {
   adminUpdateEducation,
   adminDeleteEducation,
   adminGetContacts,
+  adminDeleteContact,
+  adminGetSession,
   getAdminToken,
   setAdminToken,
   clearAdminToken,
@@ -98,11 +100,84 @@ export default function AdminPage() {
   const [education, setEducation] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [profileImageFileName, setProfileImageFileName] = useState("");
+  const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
+  const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
 
   useEffect(() => {
     const saved = getAdminToken();
     if (saved) setToken(saved);
   }, []);
+
+  const formatCountdown = useCallback((ms) => {
+    const safeMs = Math.max(0, ms);
+    const totalSeconds = Math.ceil(safeMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  }, []);
+
+  const resetSessionClock = useCallback((timeoutMs) => {
+    const safeTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 300000;
+    setSessionTimeoutMs(safeTimeout);
+    setSessionRemainingMs(safeTimeout);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let isMounted = true;
+
+    async function loadSessionInfo() {
+      try {
+        const session = await adminGetSession(token);
+        if (!isMounted) return;
+        resetSessionClock(Number(session?.timeoutMs) || 300000);
+      } catch (err) {
+        if (err?.status === 401) {
+          clearAdminToken();
+          setToken(null);
+          setStatus({ type: "error", text: "Session expired. Please log in again." });
+        }
+      }
+    }
+
+    void loadSessionInfo();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [resetSessionClock, token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const handleActivity = () => {
+      setSessionRemainingMs(sessionTimeoutMs);
+    };
+
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove", "focus"];
+    events.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+
+    const timer = window.setInterval(() => {
+      setSessionRemainingMs((prev) => {
+        const next = Math.max(0, prev - 1000);
+        if (next === 0) {
+          clearAdminToken();
+          setToken(null);
+          setStatus({
+            type: "error",
+            text: "Your session expired due to inactivity. Please sign in again.",
+          });
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      window.clearInterval(timer);
+    };
+  }, [sessionTimeoutMs, token]);
 
   const refreshAll = useCallback(async () => {
     if (!token) return;
@@ -147,6 +222,7 @@ export default function AdminPage() {
       setSkills(skillRows || []);
       setEducation(educationRows || []);
       setContacts(contactRows || []);
+      resetSessionClock(sessionTimeoutMs);
     } catch (err) {
       if (err?.status === 401) {
         clearAdminToken();
@@ -183,6 +259,7 @@ export default function AdminPage() {
       const res = await adminLogin(email, password);
       setAdminToken(res.token);
       setToken(res.token);
+      resetSessionClock(300000);
       setStatus({ type: "success", text: "Signed in successfully." });
     } catch (err) {
       setStatus({ type: "error", text: err?.message || "Login failed." });
@@ -194,6 +271,7 @@ export default function AdminPage() {
   async function handleLogout() {
     clearAdminToken();
     setToken(null);
+    setSessionRemainingMs(sessionTimeoutMs);
     setStatus({ type: "success", text: "Logged out successfully. Returning to your portfolio." });
     window.setTimeout(() => router.push("/#home"), 700);
   }
@@ -419,7 +497,27 @@ export default function AdminPage() {
     }
   }
 
+  async function handleContactDelete(contactId) {
+    if (!contactId) return;
+
+    const confirmed = window.confirm("Delete this contact message? This cannot be undone.");
+    if (!confirmed) return;
+
+    setLoading(true);
+    setStatus({ type: "idle", text: "" });
+    try {
+      await adminDeleteContact(contactId, token);
+      setContacts((prev) => prev.filter((contact) => contact.id !== contactId));
+      setStatus({ type: "success", text: "Message deleted." });
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to delete message." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const showAuth = !token;
+  const showSessionWarning = !showAuth && sessionRemainingMs <= 60000;
 
   const statusClass = useMemo(() => {
     if (status.type === "success") return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
@@ -457,6 +555,12 @@ export default function AdminPage() {
           <div className={`rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
             {status.text || (showAuth ? "Enter your admin credentials to continue." : "Ready")}
           </div>
+
+          {showSessionWarning ? (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              Your session will end in {formatCountdown(sessionRemainingMs)} due to inactivity.
+            </div>
+          ) : null}
 
           {showAuth ? (
             <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
@@ -992,6 +1096,7 @@ export default function AdminPage() {
                           <th className="px-3 py-2">Email</th>
                           <th className="px-3 py-2">Message</th>
                           <th className="px-3 py-2">Date</th>
+                          <th className="px-3 py-2 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1002,6 +1107,15 @@ export default function AdminPage() {
                             <td className="px-3 py-2 text-slate-300">{contact.message}</td>
                             <td className="px-3 py-2 text-slate-400">
                               {toDateLabel(contact.createdAt)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                onClick={() => handleContactDelete(contact.id)}
+                                disabled={loading}
+                                className="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-100 disabled:opacity-50"
+                              >
+                                Delete
+                              </button>
                             </td>
                           </tr>
                         ))}

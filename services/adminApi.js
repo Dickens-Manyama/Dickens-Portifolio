@@ -128,3 +128,11 @@ export async function adminDeleteEducation(id, token) {
 export async function adminGetContacts(token) {
   return adminFetch("/api/admin/contacts", { token });
 }
+
+export async function adminDeleteContact(id, token) {
+  return adminFetch(`/api/admin/contacts/${id}`, { method: "DELETE", token });
+}
+
+export async function adminGetSession(token) {
+  return adminFetch("/api/admin/session", { token });
+}
