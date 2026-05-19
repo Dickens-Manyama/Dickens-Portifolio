@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
-import { getApiBaseUrl } from "@/lib/api";
 import {
   adminLogin,
   adminGetProfile,
@@ -62,6 +61,12 @@ function fileToDataUrl(file) {
   });
 }
 
+function getEditableCvFileName(fileName) {
+  const safe = String(fileName || "cv").trim() || "cv";
+  const base = safe.replace(/\.[^.]+$/, "");
+  return `${base}.txt`;
+}
+
 async function compressImageFileToDataUrl(file) {
   const sourceUrl = URL.createObjectURL(file);
 
@@ -108,11 +113,12 @@ export default function AdminPage() {
   const [cvMeta, setCvMeta] = useState(null);
   const [cvEditing, setCvEditing] = useState(false);
   const [cvEditContent, setCvEditContent] = useState("");
+  const [cvPreviewing, setCvPreviewing] = useState(false);
+  const [cvPreviewContent, setCvPreviewContent] = useState("");
   const [cvFileName, setCvFileName] = useState("");
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
-  const apiBaseUrl = getApiBaseUrl() || "";
 
   useEffect(() => {
     const saved = getAdminToken();
@@ -412,6 +418,20 @@ export default function AdminPage() {
     }
   }
 
+  async function handleCvPreviewOpen() {
+    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    setLoading(true);
+    try {
+      const data = await adminGetCvContent(token);
+      setCvPreviewContent(data.content || "");
+      setCvPreviewing(true);
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to open CV preview." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function textToDataUrl(text, filename) {
     const b64 = typeof window !== "undefined" ? window.btoa(unescape(encodeURIComponent(text))) : Buffer.from(text, 'utf8').toString('base64');
     return `data:text/plain;base64,${b64}`;
@@ -421,7 +441,7 @@ export default function AdminPage() {
     if (!token) return setStatus({ type: "error", text: "Not signed in." });
     setLoading(true);
     try {
-      const filename = cvMeta?.originalName || (cvFileName || `cv-${Date.now()}.md`);
+      const filename = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}.txt`);
       const dataUrl = textToDataUrl(cvEditContent, filename);
       const saved = await adminUploadCv({ filename, contentBase64: dataUrl, mimeType: "text/plain" }, token);
       setCvMeta(saved || null);
@@ -888,9 +908,9 @@ export default function AdminPage() {
 
                           <div className="mt-3 flex items-center gap-2">
                             {cvMeta?.url ? (
-                              <a href={`${apiBaseUrl.replace(/\/$/, "")}${cvMeta.url}`} target="_blank" rel="noreferrer" className="text-indigo-300 underline text-sm">
+                              <button onClick={handleCvPreviewOpen} className="text-indigo-300 underline text-sm">
                                 View current CV
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-xs text-slate-400">No CV uploaded</span>
                             )}
@@ -1283,6 +1303,21 @@ export default function AdminPage() {
               </div>
             </div>
             <textarea value={cvEditContent} onChange={(e) => setCvEditContent(e.target.value)} rows={20} className="mt-4 w-full rounded-xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white" />
+          </div>
+        </div>
+      ) : null}
+      {cvPreviewing ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-white">Current CV Preview</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCvPreviewing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Close</button>
+                <button onClick={() => { setCvPreviewing(false); setCvEditing(true); setCvEditContent(cvPreviewContent); }} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Edit</button>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">Preview opens the database-stored CV text. For DOCX files, the text is extracted automatically.</p>
+            <pre className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-white/10 bg-slate-950/35 p-4 text-sm whitespace-pre-wrap text-slate-100">{cvPreviewContent || "No content available."}</pre>
           </div>
         </div>
       ) : null}
