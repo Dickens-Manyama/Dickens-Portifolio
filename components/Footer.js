@@ -10,14 +10,14 @@ export default function Footer() {
 
   return (
     <footer className="relative z-10 border-t border-white/10 bg-slate-950/40 backdrop-blur-xl">
-      <Container className="py-10">
+      <Container className="py-6">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
             <p className="text-sm font-semibold text-white/95">Dickens Manyama</p>
             <p className="mt-2 text-sm text-slate-300">
               Software Developer | Data Scientist | IT Systems & Networking
             </p>
-            <p className="mt-4 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-slate-400">
               © {year} Dickens Manyama. All rights reserved.
             </p>
           </div>
