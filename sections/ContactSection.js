@@ -152,7 +152,7 @@ export function ContactSection({ profile }) {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-white/95">Send a message</p>
-                  <p className="mt-1 text-xs text-slate-400">Backend-ready (POST /contact)</p>
+
                 </div>
                 <span className="text-xs font-semibold text-slate-200 rounded-full border border-white/10 bg-white/5 px-3 py-1">
                   {submitting ? "Sending..." : "Ready"}
