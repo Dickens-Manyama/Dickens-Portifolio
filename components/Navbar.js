@@ -42,11 +42,11 @@ export default function Navbar({ loading = false }) {
 
           <button
             type="button"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white/90 backdrop-blur-md transition hover:border-indigo-300/40 hover:bg-indigo-400/15 hover:text-white"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-indigo-300/35 bg-slate-950/85 text-white shadow-soft backdrop-blur-md transition hover:border-indigo-300/60 hover:bg-indigo-400/20 hover:text-white sm:w-auto sm:gap-2 sm:px-4"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Close sidebar" : "Open sidebar"}
           >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
             <span className="hidden sm:inline">Menu</span>
           </button>
         </div>
