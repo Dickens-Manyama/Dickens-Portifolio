@@ -22,7 +22,7 @@ export default function Navbar({ loading = false }) {
   }, [activeId]);
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50">
+    <header className="fixed left-0 right-0 top-0 z-50 w-full">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/35 to-transparent backdrop-blur-md" />
       <Container className="relative flex h-16 items-center justify-between">
         <div className="flex items-center gap-3">
