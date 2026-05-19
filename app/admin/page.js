@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
+import { getApiBaseUrl } from "@/lib/api";
 import {
   adminLogin,
   adminGetProfile,
@@ -111,6 +112,7 @@ export default function AdminPage() {
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
+  const apiBaseUrl = getApiBaseUrl() || "";
 
   useEffect(() => {
     const saved = getAdminToken();
@@ -367,7 +369,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const dataUrl = await fileToDataUrl(selectedCvFile);
-      const payload = { filename: selectedCvFile.name, contentBase64: dataUrl };
+      const payload = { filename: selectedCvFile.name, contentBase64: dataUrl, mimeType: selectedCvFile.type };
       const saved = await adminUploadCv(payload, token);
       setCvMeta(saved || null);
       setSelectedCvFile(null);
@@ -421,7 +423,7 @@ export default function AdminPage() {
     try {
       const filename = cvMeta?.originalName || (cvFileName || `cv-${Date.now()}.md`);
       const dataUrl = textToDataUrl(cvEditContent, filename);
-      const saved = await adminUploadCv({ filename, contentBase64: dataUrl }, token);
+      const saved = await adminUploadCv({ filename, contentBase64: dataUrl, mimeType: "text/plain" }, token);
       setCvMeta(saved || null);
       setCvEditing(false);
       setStatus({ type: "success", text: "CV saved." });
@@ -886,7 +888,7 @@ export default function AdminPage() {
 
                           <div className="mt-3 flex items-center gap-2">
                             {cvMeta?.url ? (
-                              <a href={cvMeta.url} target="_blank" rel="noreferrer" className="text-indigo-300 underline text-sm">
+                              <a href={`${apiBaseUrl.replace(/\/$/, "")}${cvMeta.url}`} target="_blank" rel="noreferrer" className="text-indigo-300 underline text-sm">
                                 View current CV
                               </a>
                             ) : (

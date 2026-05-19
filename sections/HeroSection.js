@@ -7,6 +7,7 @@ import Reveal from "@/components/Reveal";
 import TypingEffect from "@/components/TypingEffect";
 import { ArrowRight, Download } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
+import { getApiBaseUrl } from "@/lib/api";
 import portraitImage from "../my potrait.jpeg";
 
 function HeroPortrait({ src }) {
@@ -41,6 +42,8 @@ export function HeroSection({ profile }) {
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
   const intro = profile?.professionalSummary ?? "";
   const portraitSrc = profile?.profileImageUrl || portraitImage;
+  const apiBaseUrl = getApiBaseUrl() || "";
+  const cvHref = profile?.cvUrl ? `${apiBaseUrl.replace(/\/$/, "")}${profile.cvUrl}` : "/Dickens_Manyama_CV.pdf";
 
   return (
     <section id="home" className="relative pt-16 md:pt-24">
@@ -97,7 +100,7 @@ export function HeroSection({ profile }) {
               </a>
 
               <a
-                href={profile?.cvUrl || "/Dickens_Manyama_CV.pdf"}
+                href={cvHref}
                 download={profile?.cvOriginalName || undefined}
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
               >
