@@ -33,10 +33,10 @@ async function adminFetch(path, { method = "GET", body, token } = {}) {
     const res = await fetch(url, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
       signal: controller.signal,
     });
 

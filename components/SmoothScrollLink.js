@@ -2,7 +2,14 @@
 
 import { useCallback } from "react";
 
-export default function SmoothScrollLink({ href, className = "", active = false, onNavigate, children }) {
+export default function SmoothScrollLink({
+  href,
+  className = "",
+  active = false,
+  onNavigate,
+  style,
+  children,
+}) {
   const id = href?.startsWith("#") ? href.slice(1) : href;
 
   const handleClick = useCallback(
@@ -21,6 +28,7 @@ export default function SmoothScrollLink({ href, className = "", active = false,
     <a
       href={href}
       onClick={handleClick}
+      style={style}
       className={[
         "relative rounded-lg px-3 py-2 text-sm font-medium transition",
         active ? "text-white" : "text-slate-300 hover:text-white",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
 import {
   adminLogin,
@@ -45,10 +46,49 @@ function toDateLabel(value) {
   return date.toLocaleString();
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImageFileToDataUrl(file) {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("Failed to load the selected image."));
+      element.src = sourceUrl;
+    });
+
+    const maxDimension = 900;
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is not available in this browser.");
+
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export default function AdminPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [token, setToken] = useState(null);
-  const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "idle", text: "" });
 
@@ -57,18 +97,15 @@ export default function AdminPage() {
   const [skills, setSkills] = useState([]);
   const [education, setEducation] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [profileImageFileName, setProfileImageFileName] = useState("");
 
   useEffect(() => {
     const saved = getAdminToken();
     if (saved) setToken(saved);
   }, []);
 
-  useEffect(() => {
+  const refreshAll = useCallback(async () => {
     if (!token) return;
-    void refreshAll();
-  }, [token]);
-
-  async function refreshAll() {
     setLoading(true);
     setStatus({ type: "idle", text: "" });
     try {
@@ -94,10 +131,12 @@ export default function AdminPage() {
               phone: "",
               github: "",
               linkedin: "",
+              profileImageUrl: "",
               careerObjective: "",
               strengthsText: "",
             }
       );
+          setProfileImageFileName("");
 
       setProjects(
         (projectRows || []).map((p) => ({
@@ -112,18 +151,22 @@ export default function AdminPage() {
       if (err?.status === 401) {
         clearAdminToken();
         setToken(null);
-        setAuthError("Session expired. Please log in again.");
+        setStatus({ type: "error", text: "Session expired. Please log in again." });
         return;
       }
       setStatus({ type: "error", text: err?.message || "Failed to load admin data." });
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    void refreshAll();
+  }, [refreshAll, token]);
 
   async function handleLogin(e) {
     e.preventDefault();
-    setAuthError("");
     setStatus({ type: "idle", text: "" });
 
     const form = new FormData(e.currentTarget);
@@ -131,7 +174,7 @@ export default function AdminPage() {
     const password = String(form.get("password") || "").trim();
 
     if (!email || !password) {
-      setAuthError("Email and password are required.");
+      setStatus({ type: "error", text: "Email and password are required." });
       return;
     }
 
@@ -140,8 +183,9 @@ export default function AdminPage() {
       const res = await adminLogin(email, password);
       setAdminToken(res.token);
       setToken(res.token);
+      setStatus({ type: "success", text: "Signed in successfully." });
     } catch (err) {
-      setAuthError(err?.message || "Login failed.");
+      setStatus({ type: "error", text: err?.message || "Login failed." });
     } finally {
       setLoading(false);
     }
@@ -150,6 +194,8 @@ export default function AdminPage() {
   async function handleLogout() {
     clearAdminToken();
     setToken(null);
+    setStatus({ type: "success", text: "Logged out successfully. Returning to your portfolio." });
+    window.setTimeout(() => router.push("/#home"), 700);
   }
 
   async function handleProfileSave() {
@@ -167,11 +213,40 @@ export default function AdminPage() {
         ...saved,
         strengthsText: Array.isArray(saved.strengths) ? saved.strengths.join("\n") : "",
       });
+      setProfileImageFileName("");
       setStatus({ type: "success", text: "Profile updated." });
     } catch (err) {
       setStatus({ type: "error", text: err?.message || "Failed to update profile." });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleProfileImageUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file || !profileForm) return;
+
+    if (!file.type.startsWith("image/")) {
+      setStatus({ type: "error", text: "Please choose an image file." });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setStatus({ type: "error", text: "Image must be 8 MB or smaller." });
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const dataUrl = await compressImageFileToDataUrl(file);
+      setProfileForm((prev) => (prev ? { ...prev, profileImageUrl: dataUrl } : prev));
+      setProfileImageFileName(file.name);
+      setStatus({ type: "success", text: "Image ready to save." });
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to load image." });
+    } finally {
+      event.target.value = "";
     }
   }
 
@@ -379,6 +454,10 @@ export default function AdminPage() {
             )}
           </div>
 
+          <div className={`rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
+            {status.text || (showAuth ? "Enter your admin credentials to continue." : "Ready")}
+          </div>
+
           {showAuth ? (
             <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
               <h2 className="text-lg font-semibold text-white/95">Admin Login</h2>
@@ -402,11 +481,6 @@ export default function AdminPage() {
                     placeholder="••••••••"
                   />
                 </label>
-                {authError ? (
-                  <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-100">
-                    {authError}
-                  </div>
-                ) : null}
                 <button
                   type="submit"
                   disabled={loading}
@@ -434,108 +508,161 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              <div className={`rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
-                {status.text || "Ready"}
-              </div>
-
               {activeTab === "Profile" && profileForm ? (
                 <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
                   <h2 className="text-lg font-semibold text-white/95">Profile</h2>
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <label className="text-sm text-slate-300">
-                      Name
-                      <input
-                        value={profileForm.name}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, name: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300">
-                      Title
-                      <input
-                        value={profileForm.title}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, title: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300 md:col-span-2">
-                      Summary
-                      <textarea
-                        value={profileForm.summary}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, summary: e.target.value }))
-                        }
-                        rows={3}
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300">
-                      Email
-                      <input
-                        value={profileForm.email}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, email: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300">
-                      Phone
-                      <input
-                        value={profileForm.phone}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, phone: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300">
-                      GitHub
-                      <input
-                        value={profileForm.github}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, github: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300">
-                      LinkedIn
-                      <input
-                        value={profileForm.linkedin}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, linkedin: e.target.value }))
-                        }
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300 md:col-span-2">
-                      Career Objective
-                      <textarea
-                        value={profileForm.careerObjective || ""}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, careerObjective: e.target.value }))
-                        }
-                        rows={2}
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
-                    <label className="text-sm text-slate-300 md:col-span-2">
-                      Strengths (one per line)
-                      <textarea
-                        value={profileForm.strengthsText}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({ ...prev, strengthsText: e.target.value }))
-                        }
-                        rows={4}
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
-                      />
-                    </label>
+                  <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="text-sm text-slate-300">
+                        Name
+                        <input
+                          value={profileForm.name}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, name: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300">
+                        Title
+                        <input
+                          value={profileForm.title}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, title: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300 md:col-span-2">
+                        Summary
+                        <textarea
+                          value={profileForm.summary}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, summary: e.target.value }))
+                          }
+                          rows={3}
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300">
+                        Email
+                        <input
+                          value={profileForm.email}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, email: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300">
+                        Phone
+                        <input
+                          value={profileForm.phone}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, phone: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300">
+                        GitHub
+                        <input
+                          value={profileForm.github}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, github: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300">
+                        LinkedIn
+                        <input
+                          value={profileForm.linkedin}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, linkedin: e.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300 md:col-span-2">
+                        Career Objective
+                        <textarea
+                          value={profileForm.careerObjective || ""}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, careerObjective: e.target.value }))
+                          }
+                          rows={2}
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                      <label className="text-sm text-slate-300 md:col-span-2">
+                        Strengths (one per line)
+                        <textarea
+                          value={profileForm.strengthsText}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({ ...prev, strengthsText: e.target.value }))
+                          }
+                          rows={4}
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+                    </div>
+
+                    <aside className="mx-auto w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950/25 p-5 shadow-soft xl:sticky xl:top-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                            Profile image
+                          </p>
+                          <h3 className="mt-2 text-base font-semibold text-white/95">Upload from device</h3>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+                          Stored in DB
+                        </div>
+                      </div>
+
+                      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/35 p-3">
+                        <div className="relative aspect-square w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-slate-950/40">
+                          {profileForm.profileImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={profileForm.profileImageUrl}
+                              alt="Profile preview"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-slate-400">
+                              No image selected yet.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-3">
+                        <label className="block text-sm text-slate-300">
+                          Choose image from device
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProfileImageUpload}
+                            className="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                          />
+                        </label>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                          <p className="font-semibold text-white/95">Selected file</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {profileImageFileName || "No file selected"}
+                          </p>
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-slate-400">
+                          The chosen image is resized before saving so the profile update stays small.
+                        </p>
+                      </div>
+                    </aside>
                   </div>
+
                   <div className="mt-5">
                     <button
                       onClick={handleProfileSave}

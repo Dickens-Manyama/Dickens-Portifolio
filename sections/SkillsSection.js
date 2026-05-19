@@ -6,8 +6,37 @@ import { motion } from "framer-motion";
 import { SKILL_ICONS } from "@/constants/skillIcons";
 import { SkeletonCard } from "@/components/SkeletonCard";
 
+const SKILL_NAME_ICON_KEYS = {
+  php: "php",
+  javascript: "javascript",
+  python: "python",
+  sql: "sql",
+  laravel: "laravel",
+  yii2: "yii2",
+  react: "react",
+  mysql: "mysql",
+  postgresql: "postgresql",
+  "machine learning": "machineLearning",
+  "data analysis": "dataAnalysis",
+  "statistical analysis": "dataAnalysis",
+  "data visualization": "dataVisualization",
+  networking: "networking",
+  "system maintenance": "systemSupport",
+  "system support": "systemSupport",
+  "technical support": "technicalSupport",
+  "rest apis": "restApi",
+  webhooks: "webhook",
+  "google apps script": "googleAppsScript",
+};
+
 function SkillProgress({ name, level, iconKey }) {
-  const iconClass = SKILL_ICONS[iconKey] ?? SKILL_ICONS.code;
+  const normalizedKey = String(iconKey ?? "").trim();
+  const normalizedName = String(name ?? "").toLowerCase();
+  const nameMappedKey = SKILL_NAME_ICON_KEYS[normalizedName];
+  const iconClass =
+    SKILL_ICONS[nameMappedKey] ??
+    (normalizedKey && normalizedKey !== "code" ? SKILL_ICONS[normalizedKey] : undefined) ??
+    SKILL_ICONS.code;
 
   return (
     <motion.div

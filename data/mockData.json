@@ -29,8 +29,8 @@
     {
       "category": "Programming",
       "skills": [
-        { "name": "PHP", "level": 88, "iconKey": "python" },
-        { "name": "JavaScript", "level": 85, "iconKey": "js" },
+        { "name": "PHP", "level": 88, "iconKey": "php" },
+        { "name": "JavaScript", "level": 85, "iconKey": "javascript" },
         { "name": "Python", "level": 80, "iconKey": "python" },
         { "name": "SQL", "level": 82, "iconKey": "sql" }
       ]
@@ -38,9 +38,9 @@
     {
       "category": "Frameworks",
       "skills": [
-        { "name": "Laravel", "level": 86, "iconKey": "server" },
-        { "name": "Yii2", "level": 78, "iconKey": "server" },
-        { "name": "React", "level": 74, "iconKey": "code" }
+        { "name": "Laravel", "level": 86, "iconKey": "laravel" },
+        { "name": "Yii2", "level": 78, "iconKey": "yii2" },
+        { "name": "React", "level": 74, "iconKey": "react" }
       ]
     },
     {
@@ -53,25 +53,25 @@
     {
       "category": "Data Science",
       "skills": [
-        { "name": "Machine Learning", "level": 82, "iconKey": "ai" },
-        { "name": "Statistical Analysis", "level": 78, "iconKey": "ai" },
-        { "name": "Data Visualization", "level": 74, "iconKey": "ai" }
+        { "name": "Machine Learning", "level": 82, "iconKey": "machineLearning" },
+        { "name": "Statistical Analysis", "level": 78, "iconKey": "dataAnalysis" },
+        { "name": "Data Visualization", "level": 74, "iconKey": "dataVisualization" }
       ]
     },
     {
       "category": "Networking",
       "skills": [
         { "name": "Networking", "level": 72, "iconKey": "networking" },
-        { "name": "System Maintenance", "level": 70, "iconKey": "server" },
-        { "name": "Technical Support", "level": 74, "iconKey": "workflow" }
+        { "name": "System Maintenance", "level": 70, "iconKey": "systemSupport" },
+        { "name": "Technical Support", "level": 74, "iconKey": "technicalSupport" }
       ]
     },
     {
       "category": "Automation",
       "skills": [
-        { "name": "REST APIs", "level": 86, "iconKey": "automation" },
-        { "name": "Webhooks", "level": 78, "iconKey": "automation" },
-        { "name": "Google Apps Script", "level": 72, "iconKey": "workflows" }
+        { "name": "REST APIs", "level": 86, "iconKey": "restApi" },
+        { "name": "Webhooks", "level": 78, "iconKey": "webhook" },
+        { "name": "Google Apps Script", "level": 72, "iconKey": "googleAppsScript" }
       ]
     }
   ],

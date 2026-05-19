@@ -1,15 +1,24 @@
-// Map of simple icon keys to Bootstrap icon class names.
+// Map of skill icon keys to Bootstrap icon class names.
 export const SKILL_ICONS = {
   code: "bi-code-slash",
   database: "bi-database",
-  ai: "bi-cpu",
-  networking: "bi-diagram-3",
-  server: "bi-hdd-network",
-  automation: "bi-gear",
-  workflows: "bi-diagram-3",
-  cloud: "bi-cloud",
-  sql: "bi-database",
+  php: "bi-filetype-php",
+  javascript: "bi-filetype-js",
   python: "bi-filetype-py",
-  js: "bi-filetype-js",
+  sql: "bi-database",
+  laravel: "bi-layers-half",
+  yii2: "bi-diagram-3",
+  react: "bi-braces",
+  mysql: "bi-database",
+  postgresql: "bi-database",
+  machineLearning: "bi-robot",
+  dataAnalysis: "bi-graph-up",
+  dataVisualization: "bi-pie-chart",
+  networking: "bi-diagram-3",
+  systemSupport: "bi-headset",
+  technicalSupport: "bi-headset",
+  restApi: "bi-cloud-arrow-up",
+  webhook: "bi-arrow-repeat",
+  googleAppsScript: "bi-google",
 };
 

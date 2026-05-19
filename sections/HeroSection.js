@@ -1,16 +1,46 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import Container from "@/components/Container";
 import Reveal from "@/components/Reveal";
 import TypingEffect from "@/components/TypingEffect";
 import { ArrowRight, Download } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
+import portraitImage from "../my potrait.jpeg";
+
+function HeroPortrait({ src }) {
+  const isStringSource = typeof src === "string";
+
+  return (
+    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-cyan-400/15 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+      {isStringSource ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt="Portrait of Dickens Manyama"
+          className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+        />
+      ) : (
+        <Image
+          src={src}
+          alt="Portrait of Dickens Manyama"
+          fill
+          priority
+          className="object-cover transition duration-700 group-hover:scale-110"
+          sizes="(max-width: 1024px) 19rem, 22rem"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/25 via-transparent to-transparent" />
+    </div>
+  );
+}
 
 export function HeroSection({ profile }) {
   const name = profile?.name ?? "DICKENS DEUS MANYAMA";
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
   const intro = profile?.professionalSummary ?? "";
+  const portraitSrc = profile?.profileImageUrl || portraitImage;
 
   return (
     <section id="home" className="relative pt-16 md:pt-24">
@@ -19,8 +49,8 @@ export function HeroSection({ profile }) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.25),transparent_45%),radial-gradient(circle_at_50%_90%,rgba(34,211,238,0.2),transparent_45%)]" />
       </div>
 
-      <Container className="grid gap-10 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-7">
+      <Container className="grid gap-12 lg:grid-cols-12 lg:items-center">
+        <div className="lg:col-span-7 xl:col-span-6">
           <Reveal>
             <motion.div
               className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 backdrop-blur-md"
@@ -89,7 +119,7 @@ export function HeroSection({ profile }) {
           </Reveal>
 
           <Reveal delay={0.34}>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="mt-9 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
                 <p className="text-xs text-slate-400">Focus</p>
                 <p className="mt-1 text-sm font-semibold text-white/95">Cloud-ready APIs & automation</p>
@@ -102,7 +132,7 @@ export function HeroSection({ profile }) {
           </Reveal>
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 xl:col-span-6">
           <Reveal delay={0.12}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -111,49 +141,55 @@ export function HeroSection({ profile }) {
               className="relative"
             >
               <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-tr from-indigo-500/20 via-violet-500/20 to-cyan-400/20 blur-lg" />
-              <div className="relative rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-soft">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500/30 via-violet-500/20 to-cyan-400/20 border border-white/10 flex items-center justify-center shadow-soft">
-                      <span className="text-base font-bold tracking-wide">DD</span>
+              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-soft">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_40%)]" />
+                <div className="relative flex flex-col gap-5">
+                  <div className="mx-auto flex w-full max-w-[19rem] items-center justify-center lg:max-w-[22rem]">
+                    <HeroPortrait src={portraitSrc} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Profile</p>
+                        <p className="mt-1 text-sm font-semibold text-white/95">{profile?.name ?? name}</p>
+                      </div>
+                      <div className="hidden rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs text-slate-200 sm:block">
+                        Final-year DS
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white/95">{profile?.name ?? name}</p>
-                      <p className="text-xs text-slate-300">Software Developer</p>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {profile ? (
+                        <>
+                          <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/25 p-4">
+                            <p className="text-xs text-slate-400">Email</p>
+                            <p className="mt-1 break-words text-sm font-semibold text-white/95">
+                              {profile.email}
+                            </p>
+                          </div>
+                          <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/25 p-4">
+                            <p className="text-xs text-slate-400">Phone</p>
+                            <p className="mt-1 break-words text-sm font-semibold text-white/95">
+                              {profile.phoneNumbers?.[0] ?? "—"}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <SkeletonCard className="h-24" />
+                          <SkeletonCard className="h-24" />
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="text-xs text-slate-400">Quick highlight</p>
+                      <p className="mt-2 text-sm font-semibold text-white/95">
+                        Building reliable systems, integrating APIs, and making data actionable.
+                      </p>
                     </div>
                   </div>
-                  <div className="hidden sm:block rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs text-slate-200">
-                    Final-year DS
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {profile ? (
-                    <>
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-                        <p className="text-xs text-slate-400">Email</p>
-                        <p className="mt-1 text-sm font-semibold text-white/95">{profile.email}</p>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-                        <p className="text-xs text-slate-400">Phone</p>
-                        <p className="mt-1 text-sm font-semibold text-white/95">
-                          {profile.phoneNumbers?.[0] ?? "—"}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <SkeletonCard className="h-24" />
-                      <SkeletonCard className="h-24" />
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs text-slate-400">Quick highlight</p>
-                  <p className="mt-2 text-sm font-semibold text-white/95">
-                    Building reliable systems, integrating APIs, and making data actionable.
-                  </p>
                 </div>
               </div>
             </motion.div>

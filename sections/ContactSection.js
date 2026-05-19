@@ -100,16 +100,16 @@ export function ContactSection({ profile }) {
                 <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
                   <div className="flex items-center gap-3">
                     <Mail size={18} className="text-indigo-200" />
-                    <p className="text-sm font-semibold text-white/95">{email}</p>
+                    <p className="break-words text-sm font-semibold text-white/95">{email}</p>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <Phone size={18} className="text-indigo-200" />
-                    <div>
+                    <div className="min-w-0 space-y-1">
                       {phones.map((p) => (
-                        <p key={p} className="text-sm font-semibold text-white/95">
+                        <p key={p} className="break-words text-sm font-semibold text-white/95">
                           {p}
                         </p>
                       ))}
