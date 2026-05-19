@@ -441,12 +441,19 @@ export default function AdminPage() {
     if (!token) return setStatus({ type: "error", text: "Not signed in." });
     setLoading(true);
     try {
-      const filename = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}.txt`);
-      const dataUrl = textToDataUrl(cvEditContent, filename);
-      const saved = await adminUploadCv({ filename, contentBase64: dataUrl, mimeType: "text/plain" }, token);
+      const filename = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}.pdf`).replace(/\.txt$/, ".pdf");
+      const saved = await adminUploadCv(
+        {
+          filename,
+          contentText: cvEditContent,
+          outputFormat: "pdf",
+          mimeType: "application/pdf",
+        },
+        token
+      );
       setCvMeta(saved || null);
       setCvEditing(false);
-      setStatus({ type: "success", text: "CV saved." });
+      setStatus({ type: "success", text: "CV saved as PDF." });
     } catch (err) {
       setStatus({ type: "error", text: err?.message || "Failed to save CV." });
     } finally {
@@ -1299,7 +1306,7 @@ export default function AdminPage() {
               <h3 className="text-lg font-semibold text-white">Edit CV</h3>
               <div className="flex items-center gap-2">
                 <button onClick={() => setCvEditing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">Cancel</button>
-                <button onClick={handleCvSaveEdit} className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Save</button>
+                <button onClick={handleCvSaveEdit} className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Save as PDF</button>
               </div>
             </div>
             <textarea value={cvEditContent} onChange={(e) => setCvEditContent(e.target.value)} rows={20} className="mt-4 w-full rounded-xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white" />
