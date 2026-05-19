@@ -70,7 +70,7 @@ export default function Navbar({ loading = false }) {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -320, opacity: 0 }}
               transition={{ type: "spring", stiffness: 280, damping: 28 }}
-              className="fixed left-4 top-4 z-50 flex h-[calc(100vh-2rem)] w-[18rem] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/95 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+              className="fixed left-3 top-3 z-50 flex h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/95 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:left-4 sm:top-4 sm:h-[calc(100vh-2rem)] sm:w-[18rem] sm:rounded-[2rem]"
             >
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
