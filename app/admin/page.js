@@ -717,6 +717,12 @@ export default function AdminPage() {
                   Refresh
                 </button>
                 <button
+                  onClick={() => setActiveTab("Logs")}
+                  className="rounded-xl border border-white/10 bg-indigo-600/10 px-4 py-2 text-sm font-semibold text-indigo-200 hover:bg-indigo-600/20"
+                >
+                  Logs
+                </button>
+                <button
                   onClick={handleLogout}
                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
                 >
