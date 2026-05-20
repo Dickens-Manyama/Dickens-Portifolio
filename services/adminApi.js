@@ -152,3 +152,55 @@ export async function adminDeleteCv(token) {
 export async function adminGetCvContent(token) {
   return adminFetch("/api/admin/cv/content", { token });
 }
+
+export async function adminGetAuditLogs(token, params = {}) {
+  const query = new URLSearchParams();
+  if (params.skip !== undefined) query.append("skip", params.skip);
+  if (params.take !== undefined) query.append("take", params.take);
+  if (params.adminEmail) query.append("adminEmail", params.adminEmail);
+  if (params.action) query.append("action", params.action);
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  
+  const queryString = query.toString();
+  const path = `/api/admin/logs${queryString ? `?${queryString}` : ""}`;
+  return adminFetch(path, { token });
+}
+
+export async function adminGetAuditLogStats(token, params = {}) {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  
+  const queryString = query.toString();
+  const path = `/api/admin/logs/stats${queryString ? `?${queryString}` : ""}`;
+  return adminFetch(path, { token });
+}
+
+export async function adminExportAuditLogs(token, params = {}) {
+  const query = new URLSearchParams();
+  if (params.adminEmail) query.append("adminEmail", params.adminEmail);
+  if (params.action) query.append("action", params.action);
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  
+  const queryString = query.toString();
+  const path = `/api/admin/logs/export/csv${queryString ? `?${queryString}` : ""}`;
+  
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl.replace(/\/$/, "")}${path}`;
+  const headers = { Authorization: `Bearer ${token}` };
+  
+  const response = await fetch(url, { headers });
+  if (!response.ok) throw new Error(`Export failed: ${response.status}`);
+  
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `audit-logs-${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+}

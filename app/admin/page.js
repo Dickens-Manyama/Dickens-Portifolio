@@ -29,9 +29,12 @@ import {
   getAdminToken,
   setAdminToken,
   clearAdminToken,
+  adminGetAuditLogs,
+  adminGetAuditLogStats,
+  adminExportAuditLogs,
 } from "@/services/adminApi";
 
-const TABS = ["Profile", "Projects", "Skills", "Education", "Contacts"];
+const TABS = ["Profile", "Projects", "Skills", "Education", "Contacts", "Logs"];
 
 function formatStrengths(strengthsText) {
   return strengthsText
@@ -119,6 +122,11 @@ export default function AdminPage() {
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogsTotal, setAuditLogsTotal] = useState(0);
+  const [auditLogsPage, setAuditLogsPage] = useState(0);
+  const [auditLogsStats, setAuditLogsStats] = useState(null);
+  const [auditLogsLoading, setAuditLogsLoading] = useState(false);
 
   useEffect(() => {
     const saved = getAdminToken();
@@ -263,6 +271,11 @@ export default function AdminPage() {
     if (!token) return;
     void refreshAll();
   }, [refreshAll, token]);
+
+  useEffect(() => {
+    if (!token || activeTab !== "Logs") return;
+    void loadAuditLogs(0);
+  }, [token, activeTab]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -646,6 +659,34 @@ export default function AdminPage() {
       setStatus({ type: "error", text: err?.message || "Failed to delete message." });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadAuditLogs(page = 0) {
+    if (!token) return;
+    setAuditLogsLoading(true);
+    try {
+      const data = await adminGetAuditLogs(token, { skip: page * 50, take: 50 });
+      setAuditLogs(data.logs || []);
+      setAuditLogsTotal(data.pagination?.total || 0);
+      setAuditLogsPage(page);
+
+      const stats = await adminGetAuditLogStats(token);
+      setAuditLogsStats(stats);
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to load audit logs." });
+    } finally {
+      setAuditLogsLoading(false);
+    }
+  }
+
+  async function handleAuditLogsExport() {
+    if (!token) return;
+    try {
+      await adminExportAuditLogs(token);
+      setStatus({ type: "success", text: "Audit logs exported successfully." });
+    } catch (err) {
+      setStatus({ type: "error", text: err?.message || "Failed to export audit logs." });
     }
   }
 
@@ -1293,6 +1334,142 @@ export default function AdminPage() {
                       </tbody>
                     </table>
                   </div>
+                </section>
+              ) : null}
+
+              {activeTab === "Logs" ? (
+                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
+                  <div className="flex items-center justify-between gap-3 mb-6">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white/95">Audit Logs</h2>
+                      <p className="text-xs text-slate-400 mt-1">All admin actions are recorded in real-time. Read-only access.</p>
+                    </div>
+                    <button
+                      onClick={handleAuditLogsExport}
+                      disabled={auditLogsLoading}
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
+
+                  {auditLogsStats && (
+                    <div className="mb-6 grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Total Logs</p>
+                        <p className="mt-2 text-2xl font-bold text-indigo-300">{auditLogsStats.totalLogs || 0}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Action Types</p>
+                        <div className="mt-2 space-y-1">
+                          {auditLogsStats.actionBreakdown?.slice(0, 3).map((action) => (
+                            <p key={action.action} className="text-xs text-slate-300">
+                              {action.action}: <span className="font-semibold text-indigo-300">{action.count}</span>
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Admins Active</p>
+                        <p className="mt-2 text-2xl font-bold text-indigo-300">{auditLogsStats.adminBreakdown?.length || 0}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="text-xs uppercase text-slate-400">
+                        <tr>
+                          <th className="px-3 py-2">ID</th>
+                          <th className="px-3 py-2">Admin Email</th>
+                          <th className="px-3 py-2">Action</th>
+                          <th className="px-3 py-2">Method</th>
+                          <th className="px-3 py-2">Endpoint</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Timestamp</th>
+                          <th className="px-3 py-2">IP Address</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditLogsLoading ? (
+                          <tr>
+                            <td colSpan="8" className="px-3 py-4 text-center text-slate-400">
+                              Loading logs...
+                            </td>
+                          </tr>
+                        ) : auditLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="px-3 py-4 text-center text-slate-400">
+                              No logs found
+                            </td>
+                          </tr>
+                        ) : (
+                          auditLogs.map((log) => (
+                            <tr key={log.id} className="border-t border-white/10 hover:bg-white/5">
+                              <td className="px-3 py-2 text-slate-300">{log.id}</td>
+                              <td className="px-3 py-2 text-slate-300">{log.adminEmail}</td>
+                              <td className="px-3 py-2">
+                                <span className="inline-block rounded-full bg-indigo-500/20 px-2 py-1 text-xs font-semibold text-indigo-200">
+                                  {log.action}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-slate-400">
+                                <span className={`text-xs font-semibold ${
+                                  log.method === 'GET' ? 'text-blue-300' :
+                                  log.method === 'POST' ? 'text-green-300' :
+                                  log.method === 'PUT' ? 'text-yellow-300' :
+                                  log.method === 'DELETE' ? 'text-rose-300' :
+                                  'text-slate-300'
+                                }`}>
+                                  {log.method}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-slate-400 truncate max-w-xs">{log.endpoint}</td>
+                              <td className="px-3 py-2">
+                                <span className={`text-xs font-semibold ${
+                                  log.statusCode >= 200 && log.statusCode < 300 ? 'text-emerald-300' :
+                                  log.statusCode >= 400 && log.statusCode < 500 ? 'text-yellow-300' :
+                                  log.statusCode >= 500 ? 'text-rose-300' :
+                                  'text-slate-300'
+                                }`}>
+                                  {log.statusCode || 'N/A'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-slate-400">{toDateLabel(log.timestamp)}</td>
+                              <td className="px-3 py-2 text-xs text-slate-400">{log.ipAddress || 'N/A'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {auditLogsTotal > 0 && (
+                    <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                      <p className="text-xs text-slate-400">
+                        Showing logs 1-{Math.min(50, auditLogsTotal)} of {auditLogsTotal}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => loadAuditLogs(Math.max(0, auditLogsPage - 1))}
+                          disabled={auditLogsPage === 0 || auditLogsLoading}
+                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm disabled:opacity-50 hover:bg-white/10"
+                        >
+                          Previous
+                        </button>
+                        <span className="flex items-center px-3 py-1 text-sm text-slate-300">
+                          Page {auditLogsPage + 1}
+                        </span>
+                        <button
+                          onClick={() => loadAuditLogs(auditLogsPage + 1)}
+                          disabled={(auditLogsPage + 1) * 50 >= auditLogsTotal || auditLogsLoading}
+                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm disabled:opacity-50 hover:bg-white/10"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               ) : null}
             </>
