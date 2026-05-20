@@ -694,6 +694,54 @@ export default function AdminPage() {
     }
   }
 
+  function summarizeLog(log) {
+    if (!log) return "";
+    // Try parse details
+    let details = null;
+    try {
+      if (log.details && typeof log.details === "string") {
+        details = JSON.parse(log.details);
+      } else if (log.details) {
+        details = log.details;
+      }
+    } catch {
+      details = null;
+    }
+
+    if (details) {
+      // If params present, show ids or keys
+      if (details.params && Object.keys(details.params).length > 0) {
+        const keys = Object.entries(details.params)
+          .map(([k, v]) => `${k}=${v}`)
+          .slice(0, 3)
+          .join(", ");
+        return keys;
+      }
+
+      // If object contains changed fields, list top-level keys
+      if (typeof details === "object") {
+        const keys = Object.keys(details).slice(0, 4).join(", ");
+        if (keys) return keys;
+      }
+
+      // Fallback to string representation
+      if (typeof details === "string") return details.slice(0, 120);
+    }
+
+    // Fallback: infer from action
+    const action = String(log.action || "").toUpperCase();
+    if (action.includes("PROFILE")) return "Updated profile";
+    if (action.includes("PROJECT")) return "Changed project";
+    if (action.includes("SKILL")) return "Changed skill";
+    if (action.includes("EDUCATION")) return "Changed education";
+    if (action.includes("CONTACT")) return "Changed contact";
+    if (action.includes("CV")) return "Uploaded/Deleted CV";
+    if (action.includes("DELETE")) return "Deleted resource";
+    if (action.includes("CREATE")) return "Created resource";
+    if (action.includes("VIEW")) return "Viewed resource";
+    return "-";
+  }
+
   const showAuth = !token;
   const showSessionWarning = !showAuth && sessionRemainingMs <= 60000;
 
@@ -719,12 +767,6 @@ export default function AdminPage() {
                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
                 >
                   Refresh
-                </button>
-                <button
-                  onClick={() => setActiveTab("Logs")}
-                  className="rounded-xl border border-white/10 bg-indigo-600/10 px-4 py-2 text-sm font-semibold text-indigo-200 hover:bg-indigo-600/20"
-                >
-                  Logs
                 </button>
                 <button
                   onClick={handleLogout}
@@ -1395,6 +1437,7 @@ export default function AdminPage() {
                           <th className="px-3 py-2">Action</th>
                           <th className="px-3 py-2">Method</th>
                           <th className="px-3 py-2">Endpoint</th>
+                          <th className="px-3 py-2">Details</th>
                           <th className="px-3 py-2">Status</th>
                           <th className="px-3 py-2">Timestamp</th>
                           <th className="px-3 py-2">IP Address</th>
@@ -1403,13 +1446,13 @@ export default function AdminPage() {
                       <tbody>
                         {auditLogsLoading ? (
                           <tr>
-                            <td colSpan="8" className="px-3 py-4 text-center text-slate-400">
-                              Loading logs...
-                            </td>
-                          </tr>
+                              <td colSpan="9" className="px-3 py-4 text-center text-slate-400">
+                                Loading logs...
+                              </td>
+                            </tr>
                         ) : auditLogs.length === 0 ? (
                           <tr>
-                            <td colSpan="8" className="px-3 py-4 text-center text-slate-400">
+                            <td colSpan="9" className="px-3 py-4 text-center text-slate-400">
                               No logs found
                             </td>
                           </tr>
@@ -1435,6 +1478,7 @@ export default function AdminPage() {
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-xs text-slate-400 truncate max-w-xs">{log.endpoint}</td>
+                              <td className="px-3 py-2 text-slate-300 text-sm">{summarizeLog(log)}</td>
                               <td className="px-3 py-2">
                                 <span className={`text-xs font-semibold ${
                                   log.statusCode >= 200 && log.statusCode < 300 ? 'text-emerald-300' :
