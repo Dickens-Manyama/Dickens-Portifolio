@@ -674,7 +674,11 @@ export default function AdminPage() {
       const stats = await adminGetAuditLogStats(token);
       setAuditLogsStats(stats);
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to load audit logs." });
+      // Prefer server 'details' if available, otherwise show the error message
+      const serverDetails = err?.data?.details || err?.data?.details?.message || err?.data?.message;
+      const message = serverDetails || err?.message || "Failed to load audit logs.";
+      console.error("Audit logs load error:", err);
+      setStatus({ type: "error", text: message });
     } finally {
       setAuditLogsLoading(false);
     }
