@@ -1,8 +1,10 @@
 "use client";
 
+const EMPTY_CV_HTML = '<p></p>';
+
 function wrapPlainAsHtml(text) {
   const safe = String(text || "").trim();
-  if (!safe) return "<p></p>";
+  if (!safe) return EMPTY_CV_HTML;
   if (/<[a-z][\s\S]*>/i.test(safe)) return safe;
   return safe
     .split(/\n{2,}/)
@@ -10,6 +12,13 @@ function wrapPlainAsHtml(text) {
     .join("");
 }
 
+/**
+ * @param {{
+ *   html?: string;
+ *   plainText?: string;
+ *   className?: string;
+ * }} props
+ */
 export default function CvDocumentViewer({ html, plainText, className = "" }) {
   const documentHtml = html || wrapPlainAsHtml(plainText);
 
@@ -18,7 +27,8 @@ export default function CvDocumentViewer({ html, plainText, className = "" }) {
       className={`cv-document-page mx-auto min-h-[70vh] w-full max-w-[820px] rounded-sm border border-slate-300 bg-white px-10 py-12 text-slate-900 shadow-[0_2px_16px_rgba(0,0,0,0.18)] ${className}`}
     >
       <div
-        className="cv-document-body prose prose-slate max-w-none text-[11pt] leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+        dir="ltr"
+        className="cv-document-body prose prose-slate max-w-none text-[11pt] leading-relaxed [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
         dangerouslySetInnerHTML={{ __html: documentHtml }}
       />
     </div>

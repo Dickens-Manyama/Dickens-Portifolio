@@ -158,3 +158,20 @@ video {
   height: auto;
 }
 
+/* CV mini editor — force left-to-right typing (fixes reversed text / cursor) */
+.cv-word-editor,
+.cv-word-editor * {
+  direction: ltr !important;
+  unicode-bidi: normal;
+  text-align: inherit;
+}
+
+.cv-document-page {
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+}
+
+.cv-document-body a {
+  color: #185abd;
+  text-decoration: underline;
+}
+
