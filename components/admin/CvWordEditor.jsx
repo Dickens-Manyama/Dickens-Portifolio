@@ -314,8 +314,9 @@ export default function CvWordEditor({
   const insertColoredLine = useCallback(() => {
     editorRef.current?.focus();
     enableRichTextCommands();
-    const hrHtml = `<hr style="border:none;border-top:3px solid ${lineColor};margin:14px 0;background-color:transparent;" />`;
-    document.execCommand("insertHTML", false, hrHtml);
+    const lineChar = "\u2501".repeat(54);
+    const lineHtml = `<p style="text-align:center;margin:14px 0;"><span style="color:${lineColor};font-size:9pt;">${lineChar}</span></p>`;
+    document.execCommand("insertHTML", false, lineHtml);
     syncHtml();
   }, [lineColor, syncHtml]);
 
@@ -645,7 +646,7 @@ export default function CvWordEditor({
                 document.execCommand("insertText", false, text);
                 syncHtml();
               }}
-              className="cv-word-editor cv-document-page min-h-[70vh] w-full rounded-sm border border-slate-300 bg-white px-10 py-12 text-[11pt] leading-relaxed text-slate-900 shadow-[0_2px_16px_rgba(0,0,0,0.18)] outline-none focus:ring-2 focus:ring-[#185abd]/40 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+              className="cv-word-editor cv-document-page min-h-[70vh] w-full rounded-sm border border-slate-300 bg-white px-10 py-12 text-[11pt] leading-relaxed text-slate-900 shadow-[0_2px_16px_rgba(0,0,0,0.18)] outline-none focus:ring-2 focus:ring-[#185abd]/40 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_hr]:my-3 [&_hr]:border-0 [&_hr]:border-t-[3px] [&_hr]:border-solid [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
               style={{
                 direction: "ltr",
                 unicodeBidi: "normal",
