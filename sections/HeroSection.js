@@ -43,15 +43,18 @@ export function HeroSection({ profile }) {
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
   const intro = profile?.professionalSummary ?? "";
   const portraitSrc = profile?.profileImageUrl || portraitImage;
-  const apiBaseUrl = getApiBaseUrl() || "";
-  const cvBase = profile?.cvUrl ? `${apiBaseUrl.replace(/\/$/, "")}${profile.cvUrl}` : "";
-  const cvHref = cvBase
-    ? `${cvBase}${profile?.cvCacheKey ? `?v=${encodeURIComponent(profile.cvCacheKey)}` : ""}`
+  const cvProxyPath = profile?.cvUrl?.startsWith("/api/cv")
+    ? profile.cvUrl
+    : profile?.cvUrl
+      ? "/api/cv"
+      : "";
+  const cvHref = cvProxyPath
+    ? `${cvProxyPath}${profile?.cvCacheKey ? `?v=${encodeURIComponent(profile.cvCacheKey)}` : ""}`
     : "/Dickens_Manyama_CV.pdf";
   const cvDownloadName = profile?.cvOriginalName || "Dickens-Manyama-CV.docx";
 
   async function handleCvDownload(e) {
-    if (!cvBase) return;
+    if (!cvProxyPath) return;
     e.preventDefault();
     try {
       await downloadCvFile(cvHref, cvDownloadName);
