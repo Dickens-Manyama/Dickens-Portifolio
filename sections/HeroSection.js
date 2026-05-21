@@ -7,8 +7,8 @@ import Reveal from "@/components/Reveal";
 import TypingEffect from "@/components/TypingEffect";
 import { ArrowRight, Download } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
-import { getApiBaseUrl } from "@/lib/api";
 import { downloadCvFile } from "@/lib/downloadCv";
+import { getCvDownloadFilename, getCvDownloadHref, hasUploadedCv } from "@/lib/cvUrls";
 import portraitImage from "../my potrait.jpeg";
 
 function HeroPortrait({ src }) {
@@ -43,19 +43,15 @@ export function HeroSection({ profile }) {
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
   const intro = profile?.professionalSummary ?? "";
   const portraitSrc = profile?.profileImageUrl || portraitImage;
-  const cvProxyPath = profile?.cvUrl?.startsWith("/api/cv")
-    ? profile.cvUrl
-    : profile?.cvUrl
-      ? "/api/cv"
-      : "";
-  const cvHref = cvProxyPath
-    ? `${cvProxyPath}${profile?.cvCacheKey ? `?v=${encodeURIComponent(profile.cvCacheKey)}` : ""}`
-    : "/Dickens_Manyama_CV.pdf";
-  const cvDownloadName = profile?.cvOriginalName || "Dickens-Manyama-CV.docx";
+  const cvHref = hasUploadedCv(profile) ? getCvDownloadHref(profile) : "/Dickens_Manyama_CV.pdf";
+  const cvDownloadName = getCvDownloadFilename(profile);
 
   async function handleCvDownload(e) {
-    if (!cvProxyPath) return;
     e.preventDefault();
+    if (!hasUploadedCv(profile)) {
+      window.alert("CV is not available yet. Please try again after the page finishes loading.");
+      return;
+    }
     try {
       await downloadCvFile(cvHref, cvDownloadName);
     } catch (err) {
