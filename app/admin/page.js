@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Container from "@/components/Container";
+import CvWordEditor from "@/components/admin/CvWordEditor";
 import { getClientInfo } from "@/utils/clientInfo";
 import {
   adminLogin,
@@ -167,9 +168,8 @@ export default function AdminPage() {
   const [profileImageFileName, setProfileImageFileName] = useState("");
   const [cvMeta, setCvMeta] = useState(null);
   const [cvEditing, setCvEditing] = useState(false);
-  const [cvEditContent, setCvEditContent] = useState("");
+  const [cvEditHtml, setCvEditHtml] = useState("<p></p>");
   const [cvPreviewing, setCvPreviewing] = useState(false);
-  const [cvPreviewContent, setCvPreviewContent] = useState("");
   const [cvFileName, setCvFileName] = useState("");
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
@@ -474,61 +474,73 @@ export default function AdminPage() {
     }
   }
 
-  async function handleCvEditOpen() {
+  function plainTextToHtml(text) {
+    const safe = String(text || "").trim();
+    if (!safe) return "<p></p>";
+    if (/<[a-z][\s\S]*>/i.test(safe)) return safe;
+    return safe
+      .split(/\n{2,}/)
+      .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+
+  async function loadCvIntoEditor(viewOnly = false) {
     if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
       const data = await adminGetCvContent(token);
-      setCvEditContent(data.content || "");
-      setCvEditing(true);
+      const html = data?.contentHtml || plainTextToHtml(data?.content || "");
+      setCvEditHtml(html);
+      if (viewOnly) {
+        setCvPreviewing(true);
+        setCvEditing(false);
+      } else {
+        setCvEditing(true);
+        setCvPreviewing(false);
+      }
     } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to open CV for editing.");
+      setInline("profile-cv", "error", err?.message || "Failed to open CV.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleCvEditOpen() {
+    await loadCvIntoEditor(false);
   }
 
   async function handleCvPreviewOpen() {
+    await loadCvIntoEditor(true);
+  }
+
+  async function handleCvSaveEdit(html, format = "docx") {
     if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
-      const data = await adminGetCvContent(token);
-      setCvPreviewContent(data.content || "");
-      setCvPreviewing(true);
-    } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to open CV preview.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function textToDataUrl(text, filename) {
-    const b64 = typeof window !== "undefined" ? window.btoa(unescape(encodeURIComponent(text))) : Buffer.from(text, 'utf8').toString('base64');
-    return `data:text/plain;base64,${b64}`;
-  }
-
-  async function handleCvSaveEdit() {
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-    setLoading(true);
-    try {
-      const filename = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}.pdf`).replace(/\.txt$/, ".pdf");
+      const base = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}`);
+      const ext = format === "doc" ? "docx" : format;
       const saved = await adminUploadCv(
         {
-          filename,
-          contentText: cvEditContent,
-          outputFormat: "pdf",
-          mimeType: "application/pdf",
+          filename: `${base}.${ext}`,
+          contentHtml: html,
+          outputFormat: format,
         },
         token
       );
       setCvMeta(saved || null);
       setCvEditing(false);
-      setInline("profile-cv", "success", "CV saved as PDF.");
+      setCvPreviewing(false);
+      setInline("profile-cv", "success", `CV saved as ${ext.toUpperCase()}.`);
     } catch (err) {
       setInline("profile-cv", "error", err?.message || "Failed to save CV.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function closeCvWorkspace() {
+    setCvEditing(false);
+    setCvPreviewing(false);
   }
 
   async function handleProjectSave(project) {
@@ -1051,7 +1063,7 @@ export default function AdminPage() {
                         <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
                           <p className="font-semibold text-white/95">Curriculum Vitae (CV)</p>
                           <p className="mt-2 break-words text-xs text-slate-400">
-                            Upload a PDF, DOCX, TXT or Markdown file for visitors to download.
+                            Upload a CV file or use View / Edit to open the built-in Word-style editor with formatting and multi-format save.
                           </p>
 
                           <div className="mt-3 flex flex-col gap-3">
@@ -1615,35 +1627,15 @@ export default function AdminPage() {
           )}
         </div>
       </Container>
-      {cvEditing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-slate-900 p-4 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-semibold text-white">Edit CV</h3>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setCvEditing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">Cancel</button>
-                <button onClick={handleCvSaveEdit} className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Save as PDF</button>
-              </div>
-            </div>
-            <textarea value={cvEditContent} onChange={(e) => setCvEditContent(e.target.value)} rows={20} className="mt-4 w-full rounded-xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white" />
-          </div>
-        </div>
-      ) : null}
-      {cvPreviewing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-slate-900 p-4 shadow-2xl sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-semibold text-white">Current CV Preview</h3>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setCvPreviewing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Close</button>
-                <button onClick={() => { setCvPreviewing(false); setCvEditing(true); setCvEditContent(cvPreviewContent); }} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Edit</button>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-slate-400">Preview opens the database-stored CV text. For DOCX files, the text is extracted automatically.</p>
-            <pre className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-white/10 bg-slate-950/35 p-4 text-sm whitespace-pre-wrap text-slate-100">{cvPreviewContent || "No content available."}</pre>
-          </div>
-        </div>
-      ) : null}
+      <CvWordEditor
+        open={cvEditing || cvPreviewing}
+        mode={cvPreviewing ? "view" : "edit"}
+        title={cvPreviewing ? "View CV" : "Edit CV"}
+        initialHtml={cvEditHtml}
+        loading={loading}
+        onClose={closeCvWorkspace}
+        onSave={handleCvSaveEdit}
+      />
     </div>
   );
 }

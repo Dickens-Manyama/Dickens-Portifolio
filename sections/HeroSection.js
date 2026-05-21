@@ -14,13 +14,13 @@ function HeroPortrait({ src }) {
   const isStringSource = typeof src === "string";
 
   return (
-    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-cyan-400/15 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
       {isStringSource ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt="Portrait of Dickens Manyama"
-          className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+          className="h-full w-full object-contain object-center transition duration-500 ease-out group-hover:scale-[1.02]"
         />
       ) : (
         <Image
@@ -28,11 +28,11 @@ function HeroPortrait({ src }) {
           alt="Portrait of Dickens Manyama"
           fill
           priority
-          className="object-cover transition duration-700 group-hover:scale-110"
-          sizes="(max-width: 1024px) 19rem, 22rem"
+          className="object-contain object-center transition duration-500 ease-out group-hover:scale-[1.02]"
+          sizes="(max-width: 1024px) 22rem, 26rem"
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/25 via-transparent to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/15 via-transparent to-transparent" />
     </div>
   );
 }
@@ -147,7 +147,7 @@ export function HeroSection({ profile }) {
               <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-soft">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_40%)]" />
                 <div className="relative flex flex-col gap-5">
-                  <div className="mx-auto flex w-full max-w-[19rem] items-center justify-center lg:max-w-[22rem]">
+                  <div className="mx-auto flex w-full max-w-[22rem] items-center justify-center sm:max-w-[24rem] lg:max-w-[26rem]">
                     <HeroPortrait src={portraitSrc} />
                   </div>
 
