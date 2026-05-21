@@ -98,6 +98,98 @@ function wrapSelectionWithStyle(styleText, placeholder = "&#8203;") {
   document.execCommand("insertHTML", false, html);
 }
 
+const CV_LINE_CHAR = "\u2501";
+const CV_LINE_REPEAT = 54;
+const CV_LINE_CLASS = "cv-divider-line";
+
+function rgbStringToHex(color) {
+  const value = String(color || "").trim();
+  if (!value) return "#185abd";
+  if (value.startsWith("#")) return value.length === 4 ? value : value.slice(0, 7);
+  const match = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (!match) return "#185abd";
+  return (
+    "#" +
+    [match[1], match[2], match[3]]
+      .map((n) => Number(n).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+function isDividerParagraph(p) {
+  if (!p || p.tagName !== "P") return false;
+  if (p.classList.contains(CV_LINE_CLASS) || p.getAttribute("data-cv-line") === "1") return true;
+  const text = (p.textContent || "").replace(/\u200B/g, "").trim();
+  if (!text) return false;
+  return [...text].every((ch) => ch === CV_LINE_CHAR || ch === "\u00a0" || ch === " ");
+}
+
+function getDividerFromNode(node, root) {
+  if (!node || !root) return null;
+  const el =
+    node.nodeType === Node.TEXT_NODE
+      ? node.parentElement
+      : node instanceof Element
+        ? node
+        : null;
+  if (!el || !root.contains(el)) return null;
+  if (el.tagName === "HR") return el;
+  const p = el.closest("p");
+  if (p && isDividerParagraph(p)) return p;
+  return null;
+}
+
+function getDividerFromSelection(root) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  return getDividerFromNode(sel.anchorNode, root);
+}
+
+function applyLineColorToDivider(divider, color) {
+  if (divider.tagName === "HR") {
+    divider.style.border = "none";
+    divider.style.borderTop = `3px solid ${color}`;
+    divider.style.margin = "14px 0";
+    divider.style.backgroundColor = "transparent";
+    return;
+  }
+  let span = divider.querySelector("span");
+  if (!span) {
+    span = document.createElement("span");
+    span.style.fontSize = "9pt";
+    span.textContent = CV_LINE_CHAR.repeat(CV_LINE_REPEAT);
+    divider.innerHTML = "";
+    divider.appendChild(span);
+  }
+  span.style.color = color;
+  divider.style.textAlign = "center";
+  divider.style.margin = "14px 0";
+  divider.classList.add(CV_LINE_CLASS);
+  divider.setAttribute("data-cv-line", "1");
+}
+
+function removeDivider(divider, editorEl) {
+  const parent = divider.parentNode;
+  if (!parent) return;
+  const after = divider.nextElementSibling;
+  const before = divider.previousElementSibling;
+  divider.remove();
+  const focusTarget =
+    after instanceof HTMLElement
+      ? after
+      : before instanceof HTMLElement
+        ? before
+        : null;
+  if (focusTarget) {
+    placeCaretAtEnd(focusTarget);
+  } else {
+    const p = document.createElement("p");
+    p.innerHTML = "<br>";
+    editorEl?.appendChild(p);
+    placeCaretAtEnd(p);
+  }
+}
+
 function handleListBackspace(e, editorEl, syncHtml) {
   if (e.key !== "Backspace" || !editorEl) return false;
   const sel = window.getSelection();
@@ -121,6 +213,16 @@ function handleListBackspace(e, editorEl, syncHtml) {
     p.innerHTML = "<br>";
     list.replaceWith(p);
   }
+  syncHtml();
+  return true;
+}
+
+function handleDividerKeys(e, editorEl, syncHtml) {
+  if (!editorEl || (e.key !== "Backspace" && e.key !== "Delete")) return false;
+  const divider = getDividerFromSelection(editorEl);
+  if (!divider) return false;
+  e.preventDefault();
+  removeDivider(divider, editorEl);
   syncHtml();
   return true;
 }
@@ -311,11 +413,38 @@ export default function CvWordEditor({
     runCommand("createLink", url);
   }, [runCommand]);
 
+  const applyLineColor = useCallback(
+    (color) => {
+      setLineColor(color);
+      const root = editorRef.current;
+      if (!root) return;
+      const divider = getDividerFromSelection(root);
+      if (divider) {
+        applyLineColorToDivider(divider, color);
+        syncHtml();
+      }
+    },
+    [syncHtml]
+  );
+
+  const syncLineColorFromSelection = useCallback(() => {
+    const divider = getDividerFromSelection(editorRef.current);
+    if (!divider) return;
+    if (divider.tagName === "HR") {
+      const border = divider.style.borderTopColor || window.getComputedStyle(divider).borderTopColor;
+      setLineColor(rgbStringToHex(border));
+      return;
+    }
+    const span = divider.querySelector("span");
+    const color = span?.style?.color || (span ? window.getComputedStyle(span).color : "");
+    if (color) setLineColor(rgbStringToHex(color));
+  }, []);
+
   const insertColoredLine = useCallback(() => {
     editorRef.current?.focus();
     enableRichTextCommands();
-    const lineChar = "\u2501".repeat(54);
-    const lineHtml = `<p style="text-align:center;margin:14px 0;"><span style="color:${lineColor};font-size:9pt;">${lineChar}</span></p>`;
+    const lineChar = CV_LINE_CHAR.repeat(CV_LINE_REPEAT);
+    const lineHtml = `<p class="${CV_LINE_CLASS}" data-cv-line="1" style="text-align:center;margin:14px 0;"><span style="color:${lineColor};font-size:9pt;">${lineChar}</span></p><p><br></p>`;
     document.execCommand("insertHTML", false, lineHtml);
     syncHtml();
   }, [lineColor, syncHtml]);
@@ -345,6 +474,7 @@ export default function CvWordEditor({
 
   const handleEditorKeyDown = useCallback(
     (e) => {
+      if (handleDividerKeys(e, editorRef.current, syncHtml)) return;
       if (handleListBackspace(e, editorRef.current, syncHtml)) return;
     },
     [syncHtml]
@@ -354,6 +484,7 @@ export default function CvWordEditor({
     if (!open || previewMode) return;
 
     const onKeyDown = (e) => {
+      if (handleDividerKeys(e, editorRef.current, syncHtml)) return;
       if (handleListBackspace(e, editorRef.current, syncHtml)) return;
       if (!(e.ctrlKey || e.metaKey)) return;
       const key = e.key.toLowerCase();
@@ -533,12 +664,24 @@ export default function CvWordEditor({
                 <input
                   type="color"
                   value={lineColor}
-                  onChange={(e) => setLineColor(e.target.value)}
+                  onChange={(e) => applyLineColor(e.target.value)}
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
               </label>
               <ToolbarButton title="Insert coloured line" onClick={insertColoredLine}>
                 <Minus size={16} style={{ color: lineColor }} />
+              </ToolbarButton>
+              <ToolbarButton
+                title="Remove line (click line first, or Backspace)"
+                onClick={() => {
+                  const root = editorRef.current;
+                  const divider = getDividerFromSelection(root);
+                  if (!divider) return;
+                  removeDivider(divider, root);
+                  syncHtml();
+                }}
+              >
+                <Eraser size={14} />
               </ToolbarButton>
             </ToolbarGroup>
 
@@ -640,13 +783,15 @@ export default function CvWordEditor({
               spellCheck
               onInput={syncHtml}
               onKeyDown={handleEditorKeyDown}
+              onMouseUp={syncLineColorFromSelection}
+              onKeyUp={syncLineColorFromSelection}
               onPaste={(e) => {
                 e.preventDefault();
                 const text = e.clipboardData.getData("text/plain");
                 document.execCommand("insertText", false, text);
                 syncHtml();
               }}
-              className="cv-word-editor cv-document-page min-h-[70vh] w-full rounded-sm border border-slate-300 bg-white px-10 py-12 text-[11pt] leading-relaxed text-slate-900 shadow-[0_2px_16px_rgba(0,0,0,0.18)] outline-none focus:ring-2 focus:ring-[#185abd]/40 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_hr]:my-3 [&_hr]:border-0 [&_hr]:border-t-[3px] [&_hr]:border-solid [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+              className="cv-word-editor cv-document-page min-h-[70vh] w-full rounded-sm border border-slate-300 bg-white px-10 py-12 text-[11pt] leading-relaxed text-slate-900 shadow-[0_2px_16px_rgba(0,0,0,0.18)] outline-none focus:ring-2 focus:ring-[#185abd]/40 [&_.cv-divider-line]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_hr]:my-3 [&_hr]:border-0 [&_hr]:border-t-[3px] [&_hr]:border-solid [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
               style={{
                 direction: "ltr",
                 unicodeBidi: "normal",
