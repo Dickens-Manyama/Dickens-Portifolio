@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import Container from "@/components/Container";
 import {
   adminLogin,
@@ -752,16 +754,18 @@ export default function AdminPage() {
   }, [status.type]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <Container className="py-10">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-950 text-white">
+      <Container className="py-6 sm:py-10">
+        <div className="flex min-w-0 w-full max-w-full flex-col gap-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-300">Admin</p>
-              <h1 className="mt-2 text-3xl font-extrabold text-white">Portfolio Control Room</h1>
+              <h1 className="mt-2 break-words text-2xl font-extrabold text-white sm:text-3xl">
+                Portfolio Control Room
+              </h1>
             </div>
             {!showAuth && (
-              <div className="flex items-center gap-3">
+              <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
                 <button
                   onClick={refreshAll}
                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
@@ -778,19 +782,26 @@ export default function AdminPage() {
             )}
           </div>
 
-          <div className={`rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
+          <div className={`break-words rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
             {status.text || (showAuth ? "Enter your admin credentials to continue." : "Ready")}
           </div>
 
           {showSessionWarning ? (
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+            <div className="break-words rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
               Your session will end in {formatCountdown(sessionRemainingMs)} due to inactivity.
             </div>
           ) : null}
 
           {showAuth ? (
             <div className="max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
-              <h2 className="text-lg font-semibold text-white/95">Admin Login</h2>
+              <Link
+                href="/#home"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Back to home
+              </Link>
+              <h2 className="mt-4 text-lg font-semibold text-white/95">Admin Login</h2>
               <p className="mt-2 text-sm text-slate-300">Enter your admin credentials to continue.</p>
               <form onSubmit={handleLogin} className="mt-5 space-y-4">
                 <label className="block text-sm text-slate-300">
@@ -822,12 +833,12 @@ export default function AdminPage() {
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {TABS.map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
                       activeTab === tab
                         ? "border-indigo-400/50 bg-indigo-400/15 text-indigo-100"
                         : "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
@@ -839,10 +850,10 @@ export default function AdminPage() {
               </div>
 
               {activeTab === "Profile" && profileForm ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <h2 className="text-lg font-semibold text-white/95">Profile</h2>
-                  <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <div className="mt-5 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
+                    <div className="grid min-w-0 gap-4 md:grid-cols-2 [&_input]:max-w-full [&_label]:min-w-0 [&_textarea]:max-w-full">
                       <label className="text-sm text-slate-300">
                         Name
                         <input
@@ -938,15 +949,17 @@ export default function AdminPage() {
                       </label>
                     </div>
 
-                    <aside className="mx-auto w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950/25 p-5 shadow-soft xl:sticky xl:top-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
+                    <aside className="mx-auto min-w-0 w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950/25 p-4 shadow-soft sm:p-5 xl:sticky xl:top-6">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="min-w-0">
                           <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
                             Profile image
                           </p>
-                          <h3 className="mt-2 text-base font-semibold text-white/95">Upload from device</h3>
+                          <h3 className="mt-2 break-words text-base font-semibold text-white/95">
+                            Upload from device
+                          </h3>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+                        <div className="shrink-0 self-start rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
                           Stored in DB
                         </div>
                       </div>
@@ -969,46 +982,50 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-5 space-y-3">
-                        <label className="block text-sm text-slate-300">
+                        <label className="block min-w-0 text-sm text-slate-300">
                           Choose image from device
                           <input
                             type="file"
                             accept="image/*"
                             onChange={handleProfileImageUpload}
-                            className="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                            className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
                           />
                         </label>
 
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
                           <p className="font-semibold text-white/95">Selected file</p>
-                          <p className="mt-1 text-xs text-slate-400">
+                          <p className="mt-1 break-all text-xs text-slate-400">
                             {profileImageFileName || "No file selected"}
                           </p>
                         </div>
 
                         <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
                           <p className="font-semibold text-white/95">Curriculum Vitae (CV)</p>
-                          <p className="mt-2 text-xs text-slate-400">Upload a PDF, DOCX, TXT or Markdown file for visitors to download.</p>
+                          <p className="mt-2 break-words text-xs text-slate-400">
+                            Upload a PDF, DOCX, TXT or Markdown file for visitors to download.
+                          </p>
 
-                          <div className="mt-3 flex items-center gap-2">
+                          <div className="mt-3 flex flex-col gap-3">
                             <input
                               type="file"
                               accept=".pdf,.doc,.docx,.txt,.md"
                               onChange={handleCvFileSelect}
-                              className="block rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                              className="block w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
                             />
                             {selectedCvFile ? (
-                              <div className="ml-3 flex items-center gap-2">
-                                <span className="text-sm text-slate-200">{selectedCvFile.name}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="min-w-0 break-all text-sm text-slate-200">
+                                  {selectedCvFile.name}
+                                </span>
                                 <button onClick={handleCvUpload} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Upload CV</button>
                                 <button onClick={() => { setSelectedCvFile(null); setCvFileName(""); setStatus({type:'idle', text:''}); }} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Cancel</button>
                               </div>
                             ) : null}
                           </div>
 
-                          <div className="mt-3 flex items-center gap-2">
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
                             {cvMeta?.url ? (
-                              <button onClick={handleCvPreviewOpen} className="text-indigo-300 underline text-sm">
+                              <button onClick={handleCvPreviewOpen} className="text-sm text-indigo-300 underline">
                                 View current CV
                               </button>
                             ) : (
@@ -1017,8 +1034,8 @@ export default function AdminPage() {
 
                             {cvMeta ? (
                               <>
-                                <button onClick={handleCvEditOpen} className="ml-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Edit</button>
-                                <button onClick={handleCvDelete} className="ml-2 rounded-xl border border-white/10 bg-rose-600/10 px-3 py-1 text-xs text-rose-200 hover:bg-rose-600/20">Delete</button>
+                                <button onClick={handleCvEditOpen} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Edit</button>
+                                <button onClick={handleCvDelete} className="rounded-xl border border-white/10 bg-rose-600/10 px-3 py-1 text-xs text-rose-200 hover:bg-rose-600/20">Delete</button>
                               </>
                             ) : null}
                           </div>
@@ -1044,8 +1061,8 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "Projects" ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
-                  <div className="flex items-center justify-between gap-3">
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Projects</h2>
                     <button
                       onClick={handleProjectCreate}
@@ -1058,9 +1075,9 @@ export default function AdminPage() {
                     {projects.map((project) => (
                       <div
                         key={project.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/30 p-4"
+                        className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/30 p-4"
                       >
-                        <div className="grid gap-3 md:grid-cols-2">
+                        <div className="grid min-w-0 gap-3 md:grid-cols-2 [&_input]:max-w-full [&_label]:min-w-0 [&_textarea]:max-w-full">
                           <label className="text-sm text-slate-300">
                             Title
                             <input
@@ -1164,8 +1181,8 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "Skills" ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
-                  <div className="flex items-center justify-between gap-3">
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Skills</h2>
                     <button
                       onClick={handleSkillCreate}
@@ -1174,11 +1191,11 @@ export default function AdminPage() {
                       Add skill
                     </button>
                   </div>
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="mt-5 grid min-w-0 gap-4 md:grid-cols-2">
                     {skills.map((skill) => (
                       <div
                         key={skill.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/30 p-4"
+                        className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/30 p-4"
                       >
                         <label className="text-sm text-slate-300">
                           Category
@@ -1208,7 +1225,7 @@ export default function AdminPage() {
                             className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-white"
                           />
                         </label>
-                        <div className="mt-4 flex gap-3">
+                        <div className="mt-4 flex flex-wrap gap-3">
                           <button
                             onClick={() => handleSkillSave(skill)}
                             disabled={loading}
@@ -1231,8 +1248,8 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "Education" ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
-                  <div className="flex items-center justify-between gap-3">
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Education</h2>
                     <button
                       onClick={handleEducationCreate}
@@ -1245,9 +1262,9 @@ export default function AdminPage() {
                     {education.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/30 p-4"
+                        className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/30 p-4"
                       >
-                        <div className="grid gap-3 md:grid-cols-2">
+                        <div className="grid min-w-0 gap-3 md:grid-cols-2 [&_input]:max-w-full [&_label]:min-w-0 [&_textarea]:max-w-full">
                           <label className="text-sm text-slate-300">
                             Institution
                             <input
@@ -1350,10 +1367,10 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "Contacts" ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <h2 className="text-lg font-semibold text-white/95">Contact Messages</h2>
-                  <div className="mt-5 overflow-x-auto">
-                    <table className="min-w-full text-left text-sm">
+                  <div className="mt-5 -mx-1 max-w-full overflow-x-auto px-1 sm:mx-0 sm:px-0">
+                    <table className="min-w-[640px] w-full text-left text-sm">
                       <thead className="text-xs uppercase text-slate-400">
                         <tr>
                           <th className="px-3 py-2">Name</th>
@@ -1366,9 +1383,9 @@ export default function AdminPage() {
                       <tbody>
                         {contacts.map((contact) => (
                           <tr key={contact.id} className="border-t border-white/10">
-                            <td className="px-3 py-2 text-slate-100">{contact.name}</td>
-                            <td className="px-3 py-2 text-slate-300">{contact.email}</td>
-                            <td className="px-3 py-2 text-slate-300">{contact.message}</td>
+                            <td className="max-w-[8rem] break-words px-3 py-2 text-slate-100 sm:max-w-none">{contact.name}</td>
+                            <td className="max-w-[10rem] break-all px-3 py-2 text-slate-300 sm:max-w-none">{contact.email}</td>
+                            <td className="max-w-[12rem] break-words px-3 py-2 text-slate-300 sm:max-w-none">{contact.message}</td>
                             <td className="px-3 py-2 text-slate-400">
                               {toDateLabel(contact.createdAt)}
                             </td>
@@ -1390,11 +1407,13 @@ export default function AdminPage() {
               ) : null}
 
               {activeTab === "Logs" ? (
-                <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-soft">
-                  <div className="flex items-center justify-between gap-3 mb-6">
-                    <div>
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
+                  <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <h2 className="text-lg font-semibold text-white/95">Audit Logs</h2>
-                      <p className="text-xs text-slate-400 mt-1">All admin actions are recorded in real-time. Read-only access.</p>
+                      <p className="mt-1 break-words text-xs text-slate-400">
+                        All admin actions are recorded in real-time. Read-only access.
+                      </p>
                     </div>
                     <button
                       onClick={handleAuditLogsExport}
@@ -1428,8 +1447,8 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-left text-sm">
+                  <div className="-mx-1 max-w-full overflow-x-auto px-1 sm:mx-0 sm:px-0">
+                    <table className="min-w-[960px] w-full text-left text-sm">
                       <thead className="text-xs uppercase text-slate-400">
                         <tr>
                           <th className="px-3 py-2">ID</th>
@@ -1460,9 +1479,9 @@ export default function AdminPage() {
                           auditLogs.map((log) => (
                             <tr key={log.id} className="border-t border-white/10 hover:bg-white/5">
                               <td className="px-3 py-2 text-slate-300">{log.id}</td>
-                              <td className="px-3 py-2 text-slate-300">{log.adminEmail}</td>
+                              <td className="max-w-[10rem] break-all px-3 py-2 text-slate-300 sm:max-w-none">{log.adminEmail}</td>
                               <td className="px-3 py-2">
-                                <span className="inline-block rounded-full bg-indigo-500/20 px-2 py-1 text-xs font-semibold text-indigo-200">
+                                <span className="inline-block max-w-[10rem] break-words rounded-full bg-indigo-500/20 px-2 py-1 text-xs font-semibold text-indigo-200 sm:max-w-none">
                                   {log.action}
                                 </span>
                               </td>
@@ -1478,7 +1497,7 @@ export default function AdminPage() {
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-xs text-slate-400 truncate max-w-xs">{log.endpoint}</td>
-                              <td className="px-3 py-2 text-slate-300 text-sm">{summarizeLog(log)}</td>
+                              <td className="max-w-[12rem] break-words px-3 py-2 text-sm text-slate-300 sm:max-w-none">{summarizeLog(log)}</td>
                               <td className="px-3 py-2">
                                 <span className={`text-xs font-semibold ${
                                   log.statusCode >= 200 && log.statusCode < 300 ? 'text-emerald-300' :
@@ -1499,11 +1518,11 @@ export default function AdminPage() {
                   </div>
 
                   {auditLogsTotal > 0 && (
-                    <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                      <p className="text-xs text-slate-400">
+                    <div className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="break-words text-xs text-slate-400">
                         Showing logs 1-{Math.min(50, auditLogsTotal)} of {auditLogsTotal}
                       </p>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => loadAuditLogs(Math.max(0, auditLogsPage - 1))}
                           disabled={auditLogsPage === 0 || auditLogsLoading}
@@ -1531,9 +1550,9 @@ export default function AdminPage() {
         </div>
       </Container>
       {cvEditing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-3xl rounded-2xl bg-slate-900 p-6">
-            <div className="flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-slate-900 p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-semibold text-white">Edit CV</h3>
               <div className="flex items-center gap-2">
                 <button onClick={() => setCvEditing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">Cancel</button>
@@ -1545,9 +1564,9 @@ export default function AdminPage() {
         </div>
       ) : null}
       {cvPreviewing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-4xl rounded-2xl bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-slate-900 p-4 shadow-2xl sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-semibold text-white">Current CV Preview</h3>
               <div className="flex items-center gap-2">
                 <button onClick={() => setCvPreviewing(false)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Close</button>

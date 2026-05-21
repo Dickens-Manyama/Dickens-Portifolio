@@ -4,5 +4,9 @@ export const metadata = {
 };
 
 export default function AdminLayout({ children }) {
-  return <div className="min-h-screen bg-slate-950 text-white">{children}</div>;
+  return (
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-950 text-white">
+      {children}
+    </div>
+  );
 }
