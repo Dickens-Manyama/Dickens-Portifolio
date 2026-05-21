@@ -192,3 +192,11 @@ video {
   text-decoration: underline;
 }
 
+.cv-word-editor hr,
+.cv-document-body hr {
+  border: none;
+  border-top: 3px solid #185abd;
+  margin: 14px 0;
+  height: 0;
+}
+

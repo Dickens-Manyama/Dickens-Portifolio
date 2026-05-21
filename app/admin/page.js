@@ -513,15 +513,22 @@ export default function AdminPage() {
     await loadCvIntoEditor(true);
   }
 
-  async function handleCvSaveEdit(html, format = "docx") {
+  async function handleCvSaveEdit(html, format = "docx", fileBaseName) {
     if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
-      const base = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}`);
+      const fallback = String(cvMeta?.originalName || cvFileName || "Dickens-Manyama-CV")
+        .replace(/\.[^.]+$/, "")
+        .trim();
+      const base = String(fileBaseName || fallback || "Dickens-Manyama-CV")
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/\.[^.]+$/, "")
+        .slice(0, 120);
       const ext = format === "doc" ? "docx" : format;
+      const filename = `${base}.${ext}`;
       const saved = await adminUploadCv(
         {
-          filename: `${base}.${ext}`,
+          filename,
           contentHtml: html,
           outputFormat: format,
         },
@@ -531,7 +538,11 @@ export default function AdminPage() {
       setCvEditHtml(html);
       setCvEditing(false);
       setCvPreviewing(false);
-      setInline("profile-cv", "success", `CV saved as ${ext.toUpperCase()}. It is now the public Download CV file.`);
+      setInline(
+        "profile-cv",
+        "success",
+        `Saved as ${filename}. This file is now used for Download CV on your portfolio.`
+      );
     } catch (err) {
       setInline("profile-cv", "error", err?.message || "Failed to save CV.");
     } finally {
@@ -1633,6 +1644,7 @@ export default function AdminPage() {
         mode={cvPreviewing ? "view" : "edit"}
         title={cvPreviewing ? "View CV" : "Edit CV"}
         initialHtml={cvEditHtml}
+        defaultSaveName={cvMeta?.originalName || cvFileName || "Dickens-Manyama-CV"}
         loading={loading}
         onClose={closeCvWorkspace}
         onSave={handleCvSaveEdit}

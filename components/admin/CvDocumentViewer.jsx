@@ -29,7 +29,7 @@ export default function CvDocumentViewer({ html, plainText, className = "" }) {
     >
       <div
         dir="ltr"
-        className="cv-document-body prose prose-slate max-w-none text-[11pt] leading-relaxed [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
+        className="cv-document-body prose prose-slate max-w-none text-[11pt] leading-relaxed [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t-[3px] [&_hr]:border-solid [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:list-disc"
         dangerouslySetInnerHTML={{ __html: documentHtml }}
       />
     </div>

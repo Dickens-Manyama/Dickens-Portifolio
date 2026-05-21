@@ -167,6 +167,7 @@ export default function CvWordEditor({
   mode = "edit",
   title = "CV Document",
   initialHtml = EMPTY_CV_HTML,
+  defaultSaveName = "Dickens-Manyama-CV",
   loading = false,
   onClose,
   onSave,
@@ -182,8 +183,14 @@ export default function CvWordEditor({
   const [fontSize, setFontSize] = useState("3");
   const [textColor, setTextColor] = useState("#000000");
   const [highlightColor, setHighlightColor] = useState("#ffff00");
+  const [lineColor, setLineColor] = useState("#185abd");
 
   const wordCount = useMemo(() => countWords(html), [html]);
+
+  const defaultBaseName = useMemo(() => {
+    const safe = String(defaultSaveName || "Dickens-Manyama-CV").trim() || "Dickens-Manyama-CV";
+    return safe.replace(/\.[^.]+$/, "");
+  }, [defaultSaveName]);
 
   useEffect(() => {
     if (!open) return;
@@ -277,9 +284,17 @@ export default function CvWordEditor({
   const applyFontFamily = useCallback(
     (family) => {
       setFontFamily(family);
-      runCommand("fontName", family);
+      editorRef.current?.focus();
+      enableRichTextCommands();
+      const selected = window.getSelection()?.toString() || "";
+      if (selected) {
+        wrapSelectionWithStyle(`font-family:${family}`);
+      } else {
+        document.execCommand("fontName", false, family);
+      }
+      syncHtml();
     },
-    [runCommand]
+    [syncHtml]
   );
 
   const applyFontSize = useCallback(
@@ -296,6 +311,27 @@ export default function CvWordEditor({
     runCommand("createLink", url);
   }, [runCommand]);
 
+  const insertColoredLine = useCallback(() => {
+    editorRef.current?.focus();
+    enableRichTextCommands();
+    const hrHtml = `<hr style="border:none;border-top:3px solid ${lineColor};margin:14px 0;background-color:transparent;" />`;
+    document.execCommand("insertHTML", false, hrHtml);
+    syncHtml();
+  }, [lineColor, syncHtml]);
+
+  const promptAndSave = useCallback(() => {
+    if (!previewMode) syncHtml();
+    const currentHtml = previewMode ? html : editorRef.current?.innerHTML || html;
+    const ext = saveFormat === "doc" ? "docx" : saveFormat;
+    const input = window.prompt(
+      `Enter CV file name (saved as .${ext} for Download CV on your site):`,
+      defaultBaseName
+    );
+    if (input === null) return;
+    const fileBase = input.trim().replace(/\.[^.]+$/, "") || defaultBaseName;
+    onSave?.(currentHtml, saveFormat, fileBase);
+  }, [previewMode, syncHtml, html, saveFormat, defaultBaseName, onSave]);
+
   const enterEditMode = useCallback(() => {
     pendingHtmlRef.current = html;
     shouldSyncDom.current = true;
@@ -303,9 +339,7 @@ export default function CvWordEditor({
   }, [html]);
 
   const handleSave = () => {
-    if (!previewMode) syncHtml();
-    const currentHtml = previewMode ? html : editorRef.current?.innerHTML || html;
-    onSave?.(currentHtml, saveFormat);
+    promptAndSave();
   };
 
   const handleEditorKeyDown = useCallback(
@@ -339,15 +373,13 @@ export default function CvWordEditor({
         runCommand("redo");
       } else if (key === "s") {
         e.preventDefault();
-        syncHtml();
-        const currentHtml = editorRef.current?.innerHTML || html;
-        onSave?.(currentHtml, saveFormat);
+        promptAndSave();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, previewMode, runCommand, html, saveFormat, onSave, syncHtml]);
+  }, [open, previewMode, runCommand, promptAndSave]);
 
   if (!open) return null;
 
@@ -486,11 +518,26 @@ export default function CvWordEditor({
               <ToolbarButton title="Insert link" onClick={insertLink}>
                 <Link2 size={16} />
               </ToolbarButton>
-              <ToolbarButton title="Horizontal line" onClick={() => runCommand("insertHorizontalRule")}>
-                <Minus size={16} />
-              </ToolbarButton>
               <ToolbarButton title="Remove list" onClick={removeListFormatting}>
                 <Outdent size={16} />
+              </ToolbarButton>
+            </ToolbarGroup>
+
+            <ToolbarGroup label="Line">
+              <label
+                className="relative inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded border border-transparent hover:border-slate-300 hover:bg-white"
+                title="Line colour"
+              >
+                <Minus size={16} className="text-slate-700" style={{ color: lineColor }} />
+                <input
+                  type="color"
+                  value={lineColor}
+                  onChange={(e) => setLineColor(e.target.value)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                />
+              </label>
+              <ToolbarButton title="Insert coloured line" onClick={insertColoredLine}>
+                <Minus size={16} style={{ color: lineColor }} />
               </ToolbarButton>
             </ToolbarGroup>
 
@@ -536,6 +583,7 @@ export default function CvWordEditor({
             </ToolbarGroup>
 
             <div className="ml-auto flex flex-wrap items-center gap-2">
+              <span className="text-[10px] text-slate-500">Use Word (.docx) for best MS Word styling</span>
               <label className="text-xs text-slate-600">
                 Save as
                 <select
