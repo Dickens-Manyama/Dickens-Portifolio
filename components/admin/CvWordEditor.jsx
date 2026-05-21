@@ -78,6 +78,53 @@ function countWords(html) {
   return text.split(" ").filter(Boolean).length;
 }
 
+function enableRichTextCommands() {
+  try {
+    document.execCommand("styleWithCss", false, "true");
+    document.execCommand("defaultParagraphSeparator", false, "p");
+  } catch {
+    // ignore unsupported browsers
+  }
+}
+
+function wrapSelectionWithStyle(styleText, placeholder = "&#8203;") {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  const selected = range.toString();
+  const html = selected
+    ? `<span style="${styleText}">${selected}</span>`
+    : `<span style="${styleText}">${placeholder}</span>`;
+  document.execCommand("insertHTML", false, html);
+}
+
+function handleListBackspace(e, editorEl, syncHtml) {
+  if (e.key !== "Backspace" || !editorEl) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  const anchor = sel.anchorNode;
+  const element =
+    anchor?.nodeType === Node.TEXT_NODE
+      ? anchor.parentElement
+      : anchor instanceof Element
+        ? anchor
+        : null;
+  const li = element?.closest("li");
+  if (!li) return false;
+  const text = (li.textContent || "").replace(/\u200B/g, "").trim();
+  if (text.length > 0) return false;
+  e.preventDefault();
+  const list = li.parentElement;
+  li.remove();
+  if (list && list.children.length === 0) {
+    const p = document.createElement("p");
+    p.innerHTML = "<br>";
+    list.replaceWith(p);
+  }
+  syncHtml();
+  return true;
+}
+
 /**
  * @param {{
  *   title: string;
@@ -157,16 +204,9 @@ export default function CvWordEditor({
     el.style.textAlign = "left";
     el.style.fontFamily = fontFamily;
     shouldSyncDom.current = false;
+    enableRichTextCommands();
     placeCaretAtEnd(el);
   }, [open, previewMode]);
-
-  const runCommand = useCallback((command, value = null) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-      setHtml(editorRef.current.innerHTML);
-    }
-  }, []);
 
   const syncHtml = useCallback(() => {
     if (editorRef.current) {
@@ -175,6 +215,64 @@ export default function CvWordEditor({
       setHtml(next);
     }
   }, []);
+
+  const runCommand = useCallback(
+    (command, value = null) => {
+      editorRef.current?.focus();
+      enableRichTextCommands();
+      document.execCommand(command, false, value);
+      syncHtml();
+    },
+    [syncHtml]
+  );
+
+  const applyTextColor = useCallback(
+    (color) => {
+      setTextColor(color);
+      editorRef.current?.focus();
+      enableRichTextCommands();
+      const selected = window.getSelection()?.toString() || "";
+      if (selected) {
+        wrapSelectionWithStyle(`color:${color}`);
+      } else {
+        document.execCommand("foreColor", false, color);
+      }
+      syncHtml();
+    },
+    [syncHtml]
+  );
+
+  const applyHighlightColor = useCallback(
+    (color) => {
+      setHighlightColor(color);
+      editorRef.current?.focus();
+      enableRichTextCommands();
+      const selected = window.getSelection()?.toString() || "";
+      if (selected) {
+        wrapSelectionWithStyle(`background-color:${color}`);
+      } else {
+        document.execCommand("backColor", false, color);
+      }
+      syncHtml();
+    },
+    [syncHtml]
+  );
+
+  const removeListFormatting = useCallback(() => {
+    const root = editorRef.current;
+    if (!root) return;
+    root.querySelectorAll("ul, ol").forEach((list) => {
+      const parent = list.parentNode;
+      if (!parent) return;
+      [...list.querySelectorAll("li")].forEach((li) => {
+        const p = document.createElement("p");
+        p.innerHTML = li.innerHTML || "<br>";
+        parent.insertBefore(p, list);
+      });
+      list.remove();
+    });
+    syncHtml();
+  }, [syncHtml]);
 
   const applyFontFamily = useCallback(
     (family) => {
@@ -205,14 +303,23 @@ export default function CvWordEditor({
   }, [html]);
 
   const handleSave = () => {
+    if (!previewMode) syncHtml();
     const currentHtml = previewMode ? html : editorRef.current?.innerHTML || html;
     onSave?.(currentHtml, saveFormat);
   };
+
+  const handleEditorKeyDown = useCallback(
+    (e) => {
+      if (handleListBackspace(e, editorRef.current, syncHtml)) return;
+    },
+    [syncHtml]
+  );
 
   useEffect(() => {
     if (!open || previewMode) return;
 
     const onKeyDown = (e) => {
+      if (handleListBackspace(e, editorRef.current, syncHtml)) return;
       if (!(e.ctrlKey || e.metaKey)) return;
       const key = e.key.toLowerCase();
       if (key === "b") {
@@ -232,6 +339,7 @@ export default function CvWordEditor({
         runCommand("redo");
       } else if (key === "s") {
         e.preventDefault();
+        syncHtml();
         const currentHtml = editorRef.current?.innerHTML || html;
         onSave?.(currentHtml, saveFormat);
       }
@@ -239,7 +347,7 @@ export default function CvWordEditor({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, previewMode, runCommand, html, saveFormat, onSave]);
+  }, [open, previewMode, runCommand, html, saveFormat, onSave, syncHtml]);
 
   if (!open) return null;
 
@@ -332,10 +440,7 @@ export default function CvWordEditor({
                 <input
                   type="color"
                   value={textColor}
-                  onChange={(e) => {
-                    setTextColor(e.target.value);
-                    runCommand("foreColor", e.target.value);
-                  }}
+                  onChange={(e) => applyTextColor(e.target.value)}
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
               </label>
@@ -344,10 +449,7 @@ export default function CvWordEditor({
                 <input
                   type="color"
                   value={highlightColor}
-                  onChange={(e) => {
-                    setHighlightColor(e.target.value);
-                    runCommand("hiliteColor", e.target.value);
-                  }}
+                  onChange={(e) => applyHighlightColor(e.target.value)}
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
               </label>
@@ -386,6 +488,9 @@ export default function CvWordEditor({
               </ToolbarButton>
               <ToolbarButton title="Horizontal line" onClick={() => runCommand("insertHorizontalRule")}>
                 <Minus size={16} />
+              </ToolbarButton>
+              <ToolbarButton title="Remove list" onClick={removeListFormatting}>
+                <Outdent size={16} />
               </ToolbarButton>
             </ToolbarGroup>
 
@@ -485,6 +590,7 @@ export default function CvWordEditor({
               dir="ltr"
               spellCheck
               onInput={syncHtml}
+              onKeyDown={handleEditorKeyDown}
               onPaste={(e) => {
                 e.preventDefault();
                 const text = e.clipboardData.getData("text/plain");

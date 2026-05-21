@@ -528,9 +528,10 @@ export default function AdminPage() {
         token
       );
       setCvMeta(saved || null);
+      setCvEditHtml(html);
       setCvEditing(false);
       setCvPreviewing(false);
-      setInline("profile-cv", "success", `CV saved as ${ext.toUpperCase()}.`);
+      setInline("profile-cv", "success", `CV saved as ${ext.toUpperCase()}. It is now the public Download CV file.`);
     } catch (err) {
       setInline("profile-cv", "error", err?.message || "Failed to save CV.");
     } finally {

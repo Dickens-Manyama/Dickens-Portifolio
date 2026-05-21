@@ -43,7 +43,10 @@ export function HeroSection({ profile }) {
   const intro = profile?.professionalSummary ?? "";
   const portraitSrc = profile?.profileImageUrl || portraitImage;
   const apiBaseUrl = getApiBaseUrl() || "";
-  const cvHref = profile?.cvUrl ? `${apiBaseUrl.replace(/\/$/, "")}${profile.cvUrl}` : "/Dickens_Manyama_CV.pdf";
+  const cvBase = profile?.cvUrl ? `${apiBaseUrl.replace(/\/$/, "")}${profile.cvUrl}` : "";
+  const cvHref = cvBase
+    ? `${cvBase}${profile?.cvCacheKey ? `?v=${encodeURIComponent(profile.cvCacheKey)}` : ""}`
+    : "/Dickens_Manyama_CV.pdf";
 
   return (
     <section id="home" className="relative pt-16 md:pt-24">
