@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import CvDocumentViewer from "@/components/admin/CvDocumentViewer";
 
-const EMPTY_CV_HTML = '<p></p>';
+const EMPTY_CV_HTML = "<p></p>";
 
 const SAVE_FORMATS = [
   { id: "docx", label: "Word (.docx)" },

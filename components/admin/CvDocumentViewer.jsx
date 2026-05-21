@@ -1,12 +1,13 @@
 "use client";
 
-const EMPTY_CV_HTML = '<p></p>';
+const EMPTY_CV_HTML = "<p></p>";
+const HTML_TAG_PATTERN = /<[a-z][\s\S]*>/i;
 
 function wrapPlainAsHtml(text) {
-  const safe = String(text || "").trim();
-  if (!safe) return EMPTY_CV_HTML;
-  if (/<[a-z][\s\S]*>/i.test(safe)) return safe;
-  return safe
+  const normalized = String(text || "").trim();
+  if (!normalized) return EMPTY_CV_HTML;
+  if (HTML_TAG_PATTERN.test(normalized)) return normalized;
+  return normalized
     .split(/\n{2,}/)
     .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
     .join("");
