@@ -8,6 +8,7 @@ import TypingEffect from "@/components/TypingEffect";
 import { ArrowRight, Download } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { getApiBaseUrl } from "@/lib/api";
+import { downloadCvFile } from "@/lib/downloadCv";
 import portraitImage from "../my potrait.jpeg";
 
 function HeroPortrait({ src }) {
@@ -47,6 +48,17 @@ export function HeroSection({ profile }) {
   const cvHref = cvBase
     ? `${cvBase}${profile?.cvCacheKey ? `?v=${encodeURIComponent(profile.cvCacheKey)}` : ""}`
     : "/Dickens_Manyama_CV.pdf";
+  const cvDownloadName = profile?.cvOriginalName || "Dickens-Manyama-CV.docx";
+
+  async function handleCvDownload(e) {
+    if (!cvBase) return;
+    e.preventDefault();
+    try {
+      await downloadCvFile(cvHref, cvDownloadName);
+    } catch (err) {
+      window.alert(err?.message || "Could not download CV. Please try again later.");
+    }
+  }
 
   return (
     <section id="home" className="relative pt-16 md:pt-24">
@@ -104,7 +116,7 @@ export function HeroSection({ profile }) {
 
               <a
                 href={cvHref}
-                download={profile?.cvOriginalName || undefined}
+                onClick={handleCvDownload}
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
               >
                 <Download size={18} />
