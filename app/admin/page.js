@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Container from "@/components/Container";
+import { getClientInfo } from "@/utils/clientInfo";
 import {
   adminLogin,
+  adminLogout,
   adminGetProfile,
   adminSaveProfile,
   adminGetProjects,
@@ -37,6 +39,42 @@ import {
 } from "@/services/adminApi";
 
 const TABS = ["Profile", "Projects", "Skills", "Education", "Contacts", "Logs"];
+
+function InlineAlert({ message }) {
+  if (!message?.text || message.type === "idle") return null;
+  const className =
+    message.type === "success"
+      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
+      : message.type === "error"
+        ? "border-rose-400/30 bg-rose-400/10 text-rose-100"
+        : "border-white/10 bg-white/5 text-slate-200";
+  return (
+    <div className={`break-words rounded-xl border px-3 py-2 text-sm ${className}`} role="status">
+      {message.text}
+    </div>
+  );
+}
+
+function parseLogDetails(raw) {
+  if (!raw) return null;
+  try {
+    return typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    return null;
+  }
+}
+
+function getLogClientInfo(log) {
+  return parseLogDetails(log?.details)?.clientInfo || {};
+}
+
+function formatLogAction(action) {
+  const value = String(action || "");
+  if (value === "LOGIN") return "Logged in";
+  if (value === "LOGIN_FAILED") return "Login failed";
+  if (value === "LOGOUT") return "Logged out";
+  return value.replace(/_/g, " ");
+}
 
 function formatStrengths(strengthsText) {
   return strengthsText
@@ -107,7 +145,19 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState({ type: "idle", text: "" });
+  const [inlineMessages, setInlineMessages] = useState({});
+
+  const setInline = useCallback((key, type, text) => {
+    setInlineMessages((prev) => ({ ...prev, [key]: { type, text } }));
+  }, []);
+
+  const clearInline = useCallback((key) => {
+    setInlineMessages((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
 
   const [profileForm, setProfileForm] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -163,7 +213,7 @@ export default function AdminPage() {
         if (err?.status === 401) {
           clearAdminToken();
           setToken(null);
-          setStatus({ type: "error", text: "Session expired. Please log in again." });
+          setInline("login", "error", "Session expired. Please log in again.");
         }
       }
     }
@@ -173,7 +223,7 @@ export default function AdminPage() {
     return () => {
       isMounted = false;
     };
-  }, [resetSessionClock, token]);
+  }, [resetSessionClock, setInline, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -191,10 +241,11 @@ export default function AdminPage() {
         if (next === 0) {
           clearAdminToken();
           setToken(null);
-          setStatus({
-            type: "error",
-            text: "Your session expired due to inactivity. Please sign in again.",
-          });
+          setInline(
+            "login",
+            "error",
+            "Your session expired due to inactivity. Please sign in again."
+          );
         }
         return next;
       });
@@ -204,12 +255,11 @@ export default function AdminPage() {
       events.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
       window.clearInterval(timer);
     };
-  }, [sessionTimeoutMs, token]);
+  }, [sessionTimeoutMs, setInline, token]);
 
   const refreshAll = useCallback(async () => {
     if (!token) return;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
     try {
       const [profile, projectRows, skillRows, educationRows, contactRows] = await Promise.all([
         adminGetProfile(token),
@@ -260,14 +310,14 @@ export default function AdminPage() {
       if (err?.status === 401) {
         clearAdminToken();
         setToken(null);
-        setStatus({ type: "error", text: "Session expired. Please log in again." });
+        setInline("login", "error", "Session expired. Please log in again.");
         return;
       }
-      setStatus({ type: "error", text: err?.message || "Failed to load admin data." });
+      setInline("dashboard", "error", err?.message || "Failed to load admin data.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [setInline, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -281,43 +331,48 @@ export default function AdminPage() {
 
   async function handleLogin(e) {
     e.preventDefault();
-    setStatus({ type: "idle", text: "" });
+    clearInline("login");
 
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "").trim();
 
     if (!email || !password) {
-      setStatus({ type: "error", text: "Email and password are required." });
+      setInline("login", "error", "Email and password are required.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await adminLogin(email, password);
+      const res = await adminLogin(email, password, getClientInfo());
       setAdminToken(res.token);
       setToken(res.token);
       resetSessionClock(300000);
-      setStatus({ type: "success", text: "Signed in successfully." });
+      setInline("login", "success", "Signed in successfully.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Login failed." });
+      setInline("login", "error", err?.message || "Login failed.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleLogout() {
+    try {
+      if (token) await adminLogout(token, getClientInfo());
+    } catch {
+      // Still sign out locally if the network call fails.
+    }
     clearAdminToken();
     setToken(null);
     setSessionRemainingMs(sessionTimeoutMs);
-    setStatus({ type: "success", text: "Logged out successfully. Returning to your portfolio." });
+    setInline("login", "success", "Logged out successfully. Returning to your portfolio.");
     window.setTimeout(() => router.push("/#home"), 700);
   }
 
   async function handleProfileSave() {
     if (!profileForm) return;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("profile");
     try {
       const payload = {
         ...profileForm,
@@ -330,9 +385,9 @@ export default function AdminPage() {
         strengthsText: Array.isArray(saved.strengths) ? saved.strengths.join("\n") : "",
       });
       setProfileImageFileName("");
-      setStatus({ type: "success", text: "Profile updated." });
+      setInline("profile", "success", "Profile updated.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to update profile." });
+      setInline("profile", "error", err?.message || "Failed to update profile.");
     } finally {
       setLoading(false);
     }
@@ -343,13 +398,13 @@ export default function AdminPage() {
     if (!file || !profileForm) return;
 
     if (!file.type.startsWith("image/")) {
-      setStatus({ type: "error", text: "Please choose an image file." });
+      setInline("profile-image", "error", "Please choose an image file.");
       event.target.value = "";
       return;
     }
 
     if (file.size > 8 * 1024 * 1024) {
-      setStatus({ type: "error", text: "Image must be 8 MB or smaller." });
+      setInline("profile-image", "error", "Image must be 8 MB or smaller.");
       event.target.value = "";
       return;
     }
@@ -358,9 +413,9 @@ export default function AdminPage() {
       const dataUrl = await compressImageFileToDataUrl(file);
       setProfileForm((prev) => (prev ? { ...prev, profileImageUrl: dataUrl } : prev));
       setProfileImageFileName(file.name);
-      setStatus({ type: "success", text: "Image ready to save." });
+      setInline("profile-image", "success", "Image ready to save.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to load image." });
+      setInline("profile-image", "error", err?.message || "Failed to load image.");
     } finally {
       event.target.value = "";
     }
@@ -369,10 +424,10 @@ export default function AdminPage() {
   async function handleCvFileSelect(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
 
     if (file.size > 12 * 1024 * 1024) {
-      setStatus({ type: "error", text: "CV must be 12 MB or smaller." });
+      setInline("profile-cv", "error", "CV must be 12 MB or smaller.");
       event.target.value = "";
       return;
     }
@@ -380,13 +435,13 @@ export default function AdminPage() {
     // Store selected file and wait for explicit upload
     setSelectedCvFile(file);
     setCvFileName(file.name);
-    setStatus({ type: "success", text: "CV ready to upload. Click 'Upload CV' to save." });
+    setInline("profile-cv", "success", "CV ready to upload. Click 'Upload CV' to save.");
     event.target.value = "";
   }
 
   async function handleCvUpload() {
-    if (!selectedCvFile) return setStatus({ type: "error", text: "No file selected." });
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!selectedCvFile) return setInline("profile-cv", "error", "No file selected.");
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
       const dataUrl = await fileToDataUrl(selectedCvFile);
@@ -395,53 +450,53 @@ export default function AdminPage() {
       setCvMeta(saved || null);
       setSelectedCvFile(null);
       setCvFileName("");
-      setStatus({ type: "success", text: "CV uploaded." });
+      setInline("profile-cv", "success", "CV uploaded.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to upload CV." });
+      setInline("profile-cv", "error", err?.message || "Failed to upload CV.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleCvDelete() {
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
     const confirmed = window.confirm("Delete current CV? This cannot be undone.");
     if (!confirmed) return;
     setLoading(true);
     try {
       await adminDeleteCv(token);
       setCvMeta(null);
-      setStatus({ type: "success", text: "CV deleted." });
+      setInline("profile-cv", "success", "CV deleted.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to delete CV." });
+      setInline("profile-cv", "error", err?.message || "Failed to delete CV.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleCvEditOpen() {
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
       const data = await adminGetCvContent(token);
       setCvEditContent(data.content || "");
       setCvEditing(true);
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to open CV for editing." });
+      setInline("profile-cv", "error", err?.message || "Failed to open CV for editing.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleCvPreviewOpen() {
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
       const data = await adminGetCvContent(token);
       setCvPreviewContent(data.content || "");
       setCvPreviewing(true);
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to open CV preview." });
+      setInline("profile-cv", "error", err?.message || "Failed to open CV preview.");
     } finally {
       setLoading(false);
     }
@@ -453,7 +508,7 @@ export default function AdminPage() {
   }
 
   async function handleCvSaveEdit() {
-    if (!token) return setStatus({ type: "error", text: "Not signed in." });
+    if (!token) return setInline("profile-cv", "error", "Not signed in.");
     setLoading(true);
     try {
       const filename = getEditableCvFileName(cvMeta?.originalName || cvFileName || `cv-${Date.now()}.pdf`).replace(/\.txt$/, ".pdf");
@@ -468,17 +523,18 @@ export default function AdminPage() {
       );
       setCvMeta(saved || null);
       setCvEditing(false);
-      setStatus({ type: "success", text: "CV saved as PDF." });
+      setInline("profile-cv", "success", "CV saved as PDF.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to save CV." });
+      setInline("profile-cv", "error", err?.message || "Failed to save CV.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleProjectSave(project) {
+    const key = `project-${project.id}`;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline(key);
     try {
       const payload = {
         title: project.title,
@@ -495,9 +551,9 @@ export default function AdminPage() {
             : p
         )
       );
-      setStatus({ type: "success", text: "Project saved." });
+      setInline(key, "success", "Project saved.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to save project." });
+      setInline(key, "error", err?.message || "Failed to save project.");
     } finally {
       setLoading(false);
     }
@@ -505,7 +561,7 @@ export default function AdminPage() {
 
   async function handleProjectCreate() {
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("projects");
     try {
       const payload = {
         title: "New Project",
@@ -519,9 +575,9 @@ export default function AdminPage() {
         ...prev,
         { ...created, techStackText: mapTechStackToText(created.techStack) },
       ]);
-      setStatus({ type: "success", text: "Project created." });
+      setInline("projects", "success", "Project created.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to create project." });
+      setInline("projects", "error", err?.message || "Failed to create project.");
     } finally {
       setLoading(false);
     }
@@ -530,28 +586,29 @@ export default function AdminPage() {
   async function handleProjectDelete(projectId) {
     if (!projectId) return;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("projects");
     try {
       await adminDeleteProject(projectId, token);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      setStatus({ type: "success", text: "Project deleted." });
+      setInline("projects", "success", "Project deleted.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to delete project." });
+      setInline("projects", "error", err?.message || "Failed to delete project.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleSkillSave(skill) {
+    const key = `skill-${skill.id}`;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline(key);
     try {
       const payload = { category: skill.category, name: skill.name };
       const saved = await adminUpdateSkill(skill.id, payload, token);
       setSkills((prev) => prev.map((s) => (s.id === saved.id ? saved : s)));
-      setStatus({ type: "success", text: "Skill saved." });
+      setInline(key, "success", "Skill saved.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to save skill." });
+      setInline(key, "error", err?.message || "Failed to save skill.");
     } finally {
       setLoading(false);
     }
@@ -559,13 +616,13 @@ export default function AdminPage() {
 
   async function handleSkillCreate() {
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("skills");
     try {
       const created = await adminCreateSkill({ category: "New Category", name: "New Skill" }, token);
       setSkills((prev) => [...prev, created]);
-      setStatus({ type: "success", text: "Skill created." });
+      setInline("skills", "success", "Skill created.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to create skill." });
+      setInline("skills", "error", err?.message || "Failed to create skill.");
     } finally {
       setLoading(false);
     }
@@ -574,21 +631,22 @@ export default function AdminPage() {
   async function handleSkillDelete(skillId) {
     if (!skillId) return;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("skills");
     try {
       await adminDeleteSkill(skillId, token);
       setSkills((prev) => prev.filter((s) => s.id !== skillId));
-      setStatus({ type: "success", text: "Skill deleted." });
+      setInline("skills", "success", "Skill deleted.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to delete skill." });
+      setInline("skills", "error", err?.message || "Failed to delete skill.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleEducationSave(item) {
+    const key = `education-${item.id}`;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline(key);
     try {
       const payload = {
         institution: item.institution,
@@ -599,9 +657,9 @@ export default function AdminPage() {
       };
       const saved = await adminUpdateEducation(item.id, payload, token);
       setEducation((prev) => prev.map((e) => (e.id === saved.id ? saved : e)));
-      setStatus({ type: "success", text: "Education saved." });
+      setInline(key, "success", "Education saved.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to save education." });
+      setInline(key, "error", err?.message || "Failed to save education.");
     } finally {
       setLoading(false);
     }
@@ -609,7 +667,7 @@ export default function AdminPage() {
 
   async function handleEducationCreate() {
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("education");
     try {
       const created = await adminCreateEducation(
         {
@@ -622,9 +680,9 @@ export default function AdminPage() {
         token
       );
       setEducation((prev) => [...prev, created]);
-      setStatus({ type: "success", text: "Education created." });
+      setInline("education", "success", "Education created.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to create education." });
+      setInline("education", "error", err?.message || "Failed to create education.");
     } finally {
       setLoading(false);
     }
@@ -633,13 +691,13 @@ export default function AdminPage() {
   async function handleEducationDelete(itemId) {
     if (!itemId) return;
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("education");
     try {
       await adminDeleteEducation(itemId, token);
       setEducation((prev) => prev.filter((e) => e.id !== itemId));
-      setStatus({ type: "success", text: "Education deleted." });
+      setInline("education", "success", "Education deleted.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to delete education." });
+      setInline("education", "error", err?.message || "Failed to delete education.");
     } finally {
       setLoading(false);
     }
@@ -652,13 +710,13 @@ export default function AdminPage() {
     if (!confirmed) return;
 
     setLoading(true);
-    setStatus({ type: "idle", text: "" });
+    clearInline("contacts");
     try {
       await adminDeleteContact(contactId, token);
       setContacts((prev) => prev.filter((contact) => contact.id !== contactId));
-      setStatus({ type: "success", text: "Message deleted." });
+      setInline("contacts", "success", "Message deleted.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to delete message." });
+      setInline("contacts", "error", err?.message || "Failed to delete message.");
     } finally {
       setLoading(false);
     }
@@ -680,7 +738,7 @@ export default function AdminPage() {
       const serverDetails = err?.data?.details || err?.data?.details?.message || err?.data?.message;
       const message = serverDetails || err?.message || "Failed to load audit logs.";
       console.error("Audit logs load error:", err);
-      setStatus({ type: "error", text: message });
+      setInline("logs", "error", message);
     } finally {
       setAuditLogsLoading(false);
     }
@@ -690,24 +748,23 @@ export default function AdminPage() {
     if (!token) return;
     try {
       await adminExportAuditLogs(token);
-      setStatus({ type: "success", text: "Audit logs exported successfully." });
+      setInline("logs", "success", "Audit logs exported successfully.");
     } catch (err) {
-      setStatus({ type: "error", text: err?.message || "Failed to export audit logs." });
+      setInline("logs", "error", err?.message || "Failed to export audit logs.");
     }
   }
 
   function summarizeLog(log) {
     if (!log) return "";
-    // Try parse details
-    let details = null;
-    try {
-      if (log.details && typeof log.details === "string") {
-        details = JSON.parse(log.details);
-      } else if (log.details) {
-        details = log.details;
+    const details = parseLogDetails(log.details);
+    const clientInfo = details?.clientInfo;
+
+    const action = String(log.action || "").toUpperCase();
+    if (action === "LOGIN" || action === "LOGIN_FAILED" || action === "LOGOUT") {
+      if (clientInfo) {
+        return `${clientInfo.deviceType || "Unknown device"} · ${clientInfo.browser || "Unknown browser"} · ${clientInfo.engine || "Unknown engine"}`;
       }
-    } catch {
-      details = null;
+      return formatLogAction(log.action);
     }
 
     if (details) {
@@ -731,7 +788,6 @@ export default function AdminPage() {
     }
 
     // Fallback: infer from action
-    const action = String(log.action || "").toUpperCase();
     if (action.includes("PROFILE")) return "Updated profile";
     if (action.includes("PROJECT")) return "Changed project";
     if (action.includes("SKILL")) return "Changed skill";
@@ -746,12 +802,6 @@ export default function AdminPage() {
 
   const showAuth = !token;
   const showSessionWarning = !showAuth && sessionRemainingMs <= 60000;
-
-  const statusClass = useMemo(() => {
-    if (status.type === "success") return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
-    if (status.type === "error") return "border-rose-400/30 bg-rose-400/10 text-rose-100";
-    return "border-white/10 bg-white/5 text-slate-200";
-  }, [status.type]);
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-slate-950 text-white">
@@ -780,10 +830,6 @@ export default function AdminPage() {
                 </button>
               </div>
             )}
-          </div>
-
-          <div className={`break-words rounded-2xl border px-4 py-3 text-sm ${statusClass}`}>
-            {status.text || (showAuth ? "Enter your admin credentials to continue." : "Ready")}
           </div>
 
           {showSessionWarning ? (
@@ -829,6 +875,7 @@ export default function AdminPage() {
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </button>
+                <InlineAlert message={inlineMessages.login} />
               </form>
             </div>
           ) : (
@@ -848,6 +895,7 @@ export default function AdminPage() {
                   </button>
                 ))}
               </div>
+              <InlineAlert message={inlineMessages.dashboard} />
 
               {activeTab === "Profile" && profileForm ? (
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
@@ -982,6 +1030,7 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-5 space-y-3">
+                        <InlineAlert message={inlineMessages["profile-image"]} />
                         <label className="block min-w-0 text-sm text-slate-300">
                           Choose image from device
                           <input
@@ -1018,11 +1067,12 @@ export default function AdminPage() {
                                   {selectedCvFile.name}
                                 </span>
                                 <button onClick={handleCvUpload} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Upload CV</button>
-                                <button onClick={() => { setSelectedCvFile(null); setCvFileName(""); setStatus({type:'idle', text:''}); }} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Cancel</button>
+                                <button onClick={() => { setSelectedCvFile(null); setCvFileName(""); clearInline("profile-cv"); }} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Cancel</button>
                               </div>
                             ) : null}
                           </div>
 
+                          <InlineAlert message={inlineMessages["profile-cv"]} />
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             {cvMeta?.url ? (
                               <button onClick={handleCvPreviewOpen} className="text-sm text-indigo-300 underline">
@@ -1056,6 +1106,7 @@ export default function AdminPage() {
                     >
                       {loading ? "Saving..." : "Save profile"}
                     </button>
+                    <InlineAlert message={inlineMessages.profile} />
                   </div>
                 </section>
               ) : null}
@@ -1071,6 +1122,7 @@ export default function AdminPage() {
                       Add project
                     </button>
                   </div>
+                  <InlineAlert message={inlineMessages.projects} />
                   <div className="mt-5 space-y-5">
                     {projects.map((project) => (
                       <div
@@ -1174,6 +1226,7 @@ export default function AdminPage() {
                             Delete
                           </button>
                         </div>
+                        <InlineAlert message={inlineMessages[`project-${project.id}`]} />
                       </div>
                     ))}
                   </div>
@@ -1191,6 +1244,7 @@ export default function AdminPage() {
                       Add skill
                     </button>
                   </div>
+                  <InlineAlert message={inlineMessages.skills} />
                   <div className="mt-5 grid min-w-0 gap-4 md:grid-cols-2">
                     {skills.map((skill) => (
                       <div
@@ -1241,6 +1295,7 @@ export default function AdminPage() {
                             Delete
                           </button>
                         </div>
+                        <InlineAlert message={inlineMessages[`skill-${skill.id}`]} />
                       </div>
                     ))}
                   </div>
@@ -1258,6 +1313,7 @@ export default function AdminPage() {
                       Add education
                     </button>
                   </div>
+                  <InlineAlert message={inlineMessages.education} />
                   <div className="mt-5 space-y-5">
                     {education.map((item) => (
                       <div
@@ -1360,6 +1416,7 @@ export default function AdminPage() {
                             Delete
                           </button>
                         </div>
+                        <InlineAlert message={inlineMessages[`education-${item.id}`]} />
                       </div>
                     ))}
                   </div>
@@ -1369,6 +1426,7 @@ export default function AdminPage() {
               {activeTab === "Contacts" ? (
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <h2 className="text-lg font-semibold text-white/95">Contact Messages</h2>
+                  <InlineAlert message={inlineMessages.contacts} />
                   <div className="mt-5 -mx-1 max-w-full overflow-x-auto px-1 sm:mx-0 sm:px-0">
                     <table className="min-w-[640px] w-full text-left text-sm">
                       <thead className="text-xs uppercase text-slate-400">
@@ -1423,6 +1481,7 @@ export default function AdminPage() {
                       Export CSV
                     </button>
                   </div>
+                  <InlineAlert message={inlineMessages.logs} />
 
                   {auditLogsStats && (
                     <div className="mb-6 grid gap-4 md:grid-cols-3">
@@ -1448,14 +1507,16 @@ export default function AdminPage() {
                   )}
 
                   <div className="-mx-1 max-w-full overflow-x-auto px-1 sm:mx-0 sm:px-0">
-                    <table className="min-w-[960px] w-full text-left text-sm">
+                    <table className="min-w-[1100px] w-full text-left text-sm">
                       <thead className="text-xs uppercase text-slate-400">
                         <tr>
                           <th className="px-3 py-2">ID</th>
                           <th className="px-3 py-2">Admin Email</th>
                           <th className="px-3 py-2">Action</th>
+                          <th className="px-3 py-2">Device</th>
+                          <th className="px-3 py-2">Browser</th>
+                          <th className="px-3 py-2">Engine</th>
                           <th className="px-3 py-2">Method</th>
-                          <th className="px-3 py-2">Endpoint</th>
                           <th className="px-3 py-2">Details</th>
                           <th className="px-3 py-2">Status</th>
                           <th className="px-3 py-2">Timestamp</th>
@@ -1465,26 +1526,31 @@ export default function AdminPage() {
                       <tbody>
                         {auditLogsLoading ? (
                           <tr>
-                              <td colSpan="9" className="px-3 py-4 text-center text-slate-400">
+                              <td colSpan="11" className="px-3 py-4 text-center text-slate-400">
                                 Loading logs...
                               </td>
                             </tr>
                         ) : auditLogs.length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="px-3 py-4 text-center text-slate-400">
+                            <td colSpan="11" className="px-3 py-4 text-center text-slate-400">
                               No logs found
                             </td>
                           </tr>
                         ) : (
-                          auditLogs.map((log) => (
+                          auditLogs.map((log) => {
+                            const clientInfo = getLogClientInfo(log);
+                            return (
                             <tr key={log.id} className="border-t border-white/10 hover:bg-white/5">
                               <td className="px-3 py-2 text-slate-300">{log.id}</td>
                               <td className="max-w-[10rem] break-all px-3 py-2 text-slate-300 sm:max-w-none">{log.adminEmail}</td>
                               <td className="px-3 py-2">
                                 <span className="inline-block max-w-[10rem] break-words rounded-full bg-indigo-500/20 px-2 py-1 text-xs font-semibold text-indigo-200 sm:max-w-none">
-                                  {log.action}
+                                  {formatLogAction(log.action)}
                                 </span>
                               </td>
+                              <td className="px-3 py-2 text-slate-300">{clientInfo.deviceType || "-"}</td>
+                              <td className="px-3 py-2 text-slate-300">{clientInfo.browser || "-"}</td>
+                              <td className="px-3 py-2 text-slate-300">{clientInfo.engine || "-"}</td>
                               <td className="px-3 py-2 text-slate-400">
                                 <span className={`text-xs font-semibold ${
                                   log.method === 'GET' ? 'text-blue-300' :
@@ -1496,7 +1562,6 @@ export default function AdminPage() {
                                   {log.method}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-xs text-slate-400 truncate max-w-xs">{log.endpoint}</td>
                               <td className="max-w-[12rem] break-words px-3 py-2 text-sm text-slate-300 sm:max-w-none">{summarizeLog(log)}</td>
                               <td className="px-3 py-2">
                                 <span className={`text-xs font-semibold ${
@@ -1511,7 +1576,8 @@ export default function AdminPage() {
                               <td className="px-3 py-2 text-xs text-slate-400">{toDateLabel(log.timestamp)}</td>
                               <td className="px-3 py-2 text-xs text-slate-400">{log.ipAddress || 'N/A'}</td>
                             </tr>
-                          ))
+                          );
+                          })
                         )}
                       </tbody>
                     </table>

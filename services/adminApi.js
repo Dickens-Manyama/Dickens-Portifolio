@@ -65,8 +65,19 @@ function safeJsonParse(text) {
   }
 }
 
-export async function adminLogin(email, password) {
-  return adminFetch("/api/admin/auth/login", { method: "POST", body: { email, password } });
+export async function adminLogin(email, password, clientInfo) {
+  return adminFetch("/api/admin/auth/login", {
+    method: "POST",
+    body: { email, password, clientInfo },
+  });
+}
+
+export async function adminLogout(token, clientInfo) {
+  return adminFetch("/api/admin/auth/logout", {
+    method: "POST",
+    body: { clientInfo },
+    token,
+  });
 }
 
 export async function adminGetProfile(token) {
