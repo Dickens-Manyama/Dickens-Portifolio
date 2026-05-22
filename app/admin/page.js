@@ -29,6 +29,7 @@ import {
   adminGetSession,
   adminGetAdmins,
   adminCreateAdmin,
+  adminUpdateAdmin,
   adminDeleteAdmin,
   adminGetCvMetadata,
   adminUploadCv,
@@ -170,6 +171,7 @@ export default function AdminPage() {
   const [contacts, setContacts] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [adminForm, setAdminForm] = useState({ email: "", password: "", durationValue: 30, durationUnit: "minutes" });
+  const [adminEditor, setAdminEditor] = useState(null);
   const [profileImageFileName, setProfileImageFileName] = useState("");
   const [cvMeta, setCvMeta] = useState(null);
   const [cvEditing, setCvEditing] = useState(false);
@@ -179,7 +181,7 @@ export default function AdminPage() {
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
-  const [sessionInfo, setSessionInfo] = useState({ isSuperAdmin: false, adminExpiresAt: null });
+  const [sessionInfo, setSessionInfo] = useState({ isSuperAdmin: false, adminExpiresAt: null, adminEmail: null });
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLogsTotal, setAuditLogsTotal] = useState(0);
   const [auditLogsPage, setAuditLogsPage] = useState(0);
@@ -233,6 +235,7 @@ export default function AdminPage() {
         setSessionInfo({
           isSuperAdmin: !!session?.isSuperAdmin,
           adminExpiresAt: session?.adminExpiresAt || null,
+          adminEmail: session?.adminEmail || null,
         });
       } catch (err) {
         if (err?.status === 401) {
@@ -785,6 +788,7 @@ export default function AdminPage() {
   async function handleAdminCreate(event) {
     event.preventDefault();
     clearInline("admins");
+    const formElement = event.currentTarget;
 
     if (!sessionInfo.isSuperAdmin) {
       setInline("admins", "error", "Super admin access required.");
@@ -812,10 +816,72 @@ export default function AdminPage() {
       const created = await adminCreateAdmin({ email, password, durationValue, durationUnit }, token);
       setAdmins((prev) => [...prev.filter((item) => item.id !== created.id), created]);
       setAdminForm({ email: "", password: "", durationValue: 30, durationUnit: "minutes" });
-      event.currentTarget.reset();
+      if (formElement?.reset) formElement.reset();
       setInline("admins", "success", `Temporary admin created for ${toDateLabel(created.activeUntil)}.`);
     } catch (err) {
       setInline("admins", "error", err?.message || "Failed to create admin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openAdminEditor(admin, mode = "edit") {
+    if (!admin) return;
+    clearInline("admins");
+    setAdminEditor({
+      id: admin.id,
+      email: admin.email || "",
+      password: "",
+      durationValue: mode === "extend" ? "60" : "",
+      durationUnit: "minutes",
+      currentExpiresAt: admin.activeUntil || null,
+      mode,
+    });
+  }
+
+  function closeAdminEditor() {
+    setAdminEditor(null);
+  }
+
+  async function handleAdminUpdate(event) {
+    event.preventDefault();
+    if (!adminEditor?.id) return;
+
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "").trim();
+    const durationRaw = String(form.get("durationValue") || "").trim();
+    const durationValue = durationRaw ? Number(durationRaw) : null;
+    const durationUnit = String(form.get("durationUnit") || "minutes").trim();
+
+    if (!email) {
+      setInline("admins", "error", "Email is required.");
+      return;
+    }
+
+    const payload = { email };
+    if (password) payload.password = password;
+    if (durationValue != null) {
+      if (!Number.isFinite(durationValue) || durationValue <= 0) {
+        setInline("admins", "error", "Duration must be a positive number.");
+        return;
+      }
+      payload.durationValue = durationValue;
+      payload.durationUnit = durationUnit;
+    }
+
+    setLoading(true);
+    clearInline("admins");
+    try {
+      const updated = await adminUpdateAdmin(adminEditor.id, payload, token);
+      setAdmins((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      if (sessionInfo.adminEmail && sessionInfo.adminEmail === adminEditor.email) {
+        setSessionInfo((prev) => ({ ...prev, adminEmail: updated.email }));
+      }
+      setAdminEditor(null);
+      setInline("admins", "success", "Admin updated.");
+    } catch (err) {
+      setInline("admins", "error", err?.message || "Failed to update admin.");
     } finally {
       setLoading(false);
     }
@@ -1709,26 +1775,18 @@ export default function AdminPage() {
                                 ) : (
                                   <div className="flex items-center justify-end gap-2">
                                     <button
-                                      onClick={async () => {
-                                        const addMinutes = Number(window.prompt('Extend admin access by how many minutes?', '60'));
-                                        if (!Number.isFinite(addMinutes) || addMinutes <= 0) return;
-                                        const current = admin.activeUntil ? new Date(admin.activeUntil) : new Date();
-                                        const newExpires = new Date(Math.max(Date.now(), current.getTime()) + addMinutes * 60000).toISOString();
-                                        try {
-                                          setLoading(true);
-                                          const updated = await adminUpdateAdmin(admin.id, { expiresAt: newExpires }, token);
-                                          setAdmins((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
-                                          setInline('admins', 'success', 'Admin expiry updated.');
-                                        } catch (err) {
-                                          setInline('admins', 'error', err?.message || 'Failed to update admin.');
-                                        } finally {
-                                          setLoading(false);
-                                        }
-                                      }}
+                                      onClick={() => openAdminEditor(admin, "extend")}
                                       disabled={loading}
                                       className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-sm font-semibold text-amber-100 disabled:opacity-50"
                                     >
                                       Extend
+                                    </button>
+                                    <button
+                                      onClick={() => openAdminEditor(admin, "edit")}
+                                      disabled={loading}
+                                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm font-semibold text-slate-100 disabled:opacity-50"
+                                    >
+                                      Edit
                                     </button>
                                     <button
                                       onClick={() => handleAdminDelete(admin.id, admin.email)}
@@ -1747,6 +1805,101 @@ export default function AdminPage() {
                     </table>
                   </div>
                 </section>
+              ) : null}
+
+              {adminEditor ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
+                  <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">
+                          {adminEditor.mode === "extend" ? "Extend Admin" : "Edit Admin"}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-400">
+                          Update the admin email, password, and expiry without using browser prompts.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={closeAdminEditor}
+                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleAdminUpdate} className="grid gap-4 px-5 py-5 sm:px-6 sm:grid-cols-2">
+                      <label className="text-sm text-slate-300 sm:col-span-2">
+                        Email
+                        <input
+                          name="email"
+                          type="email"
+                          defaultValue={adminEditor.email}
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+
+                      <label className="text-sm text-slate-300 sm:col-span-2">
+                        Password
+                        <input
+                          name="password"
+                          type="password"
+                          placeholder="Leave blank to keep the current password"
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        />
+                      </label>
+
+                      <div className="sm:col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Expiry</p>
+                        <p className="mt-1 text-sm text-slate-300">
+                          Current expiry: {adminEditor.currentExpiresAt ? toDateLabel(adminEditor.currentExpiresAt) : "Never"}
+                        </p>
+                        <div className="mt-4 grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
+                          <label className="text-sm text-slate-300">
+                            Add minutes / hours / days
+                            <input
+                              name="durationValue"
+                              type="number"
+                              min="1"
+                              defaultValue={adminEditor.durationValue}
+                              placeholder="Optional"
+                              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                            />
+                          </label>
+                          <label className="text-sm text-slate-300">
+                            Unit
+                            <select
+                              name="durationUnit"
+                              defaultValue={adminEditor.durationUnit}
+                              className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                            >
+                              <option value="minutes">Minutes</option>
+                              <option value="hours">Hours</option>
+                              <option value="days">Days</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={closeAdminEditor}
+                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
+                        >
+                          {loading ? "Saving..." : "Save changes"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               ) : null}
 
               {activeTab === "Logs" ? (
