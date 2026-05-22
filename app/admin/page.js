@@ -1701,16 +1701,43 @@ export default function AdminPage() {
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-right">
-                                {admin.isSuperAdmin ? (
+                                {/* Do not allow deleting the currently signed-in admin */}
+                                {admin.email === sessionInfo.adminEmail ? (
+                                  <span className="text-xs text-slate-500">You</span>
+                                ) : admin.isSuperAdmin ? (
                                   <span className="text-xs text-slate-500">Protected</span>
                                 ) : (
-                                  <button
-                                    onClick={() => handleAdminDelete(admin.id, admin.email)}
-                                    disabled={loading}
-                                    className="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-100 disabled:opacity-50"
-                                  >
-                                    Delete
-                                  </button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        const addMinutes = Number(window.prompt('Extend admin access by how many minutes?', '60'));
+                                        if (!Number.isFinite(addMinutes) || addMinutes <= 0) return;
+                                        const current = admin.activeUntil ? new Date(admin.activeUntil) : new Date();
+                                        const newExpires = new Date(Math.max(Date.now(), current.getTime()) + addMinutes * 60000).toISOString();
+                                        try {
+                                          setLoading(true);
+                                          const updated = await adminUpdateAdmin(admin.id, { expiresAt: newExpires }, token);
+                                          setAdmins((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+                                          setInline('admins', 'success', 'Admin expiry updated.');
+                                        } catch (err) {
+                                          setInline('admins', 'error', err?.message || 'Failed to update admin.');
+                                        } finally {
+                                          setLoading(false);
+                                        }
+                                      }}
+                                      disabled={loading}
+                                      className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-sm font-semibold text-amber-100 disabled:opacity-50"
+                                    >
+                                      Extend
+                                    </button>
+                                    <button
+                                      onClick={() => handleAdminDelete(admin.id, admin.email)}
+                                      disabled={loading}
+                                      className="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-100 disabled:opacity-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
                                 )}
                               </td>
                             </tr>

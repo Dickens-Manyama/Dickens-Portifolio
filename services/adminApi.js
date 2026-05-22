@@ -160,6 +160,10 @@ export async function adminDeleteAdmin(id, token) {
   return adminFetch(`/api/admin/admins/${id}`, { method: "DELETE", token });
 }
 
+export async function adminUpdateAdmin(id, payload, token) {
+  return adminFetch(`/api/admin/admins/${id}`, { method: "PUT", body: payload, token });
+}
+
 export async function adminGetCvMetadata(token) {
   return adminFetch("/api/admin/cv", { token });
 }
