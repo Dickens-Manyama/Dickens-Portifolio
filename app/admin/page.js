@@ -171,6 +171,21 @@ export default function AdminPage() {
   const [contacts, setContacts] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [adminForm, setAdminForm] = useState({ email: "", password: "", durationValue: 30, durationUnit: "minutes" });
+  const [projectForm, setProjectForm] = useState({
+    title: "",
+    description: "",
+    techStack: "",
+    githubLink: "",
+    liveDemo: "",
+  });
+  const [skillForm, setSkillForm] = useState({ category: "", name: "" });
+  const [educationForm, setEducationForm] = useState({
+    institution: "",
+    program: "",
+    description: "",
+    statusTag: "",
+    sortOrder: "",
+  });
   const [adminEditor, setAdminEditor] = useState(null);
   const [profileImageFileName, setProfileImageFileName] = useState("");
   const [cvMeta, setCvMeta] = useState(null);
@@ -622,22 +637,34 @@ export default function AdminPage() {
     }
   }
 
-  async function handleProjectCreate() {
+  async function handleProjectCreate(event) {
+    event.preventDefault();
+    const title = String(projectForm.title || "").trim();
+    const description = String(projectForm.description || "").trim();
+
+    if (!title || !description) {
+      setInline("projects", "error", "Title and description are required.");
+      return;
+    }
+
     setLoading(true);
     clearInline("projects");
     try {
-      const payload = {
-        title: "New Project",
-        description: "Describe the project.",
-        techStack: "",
-        githubLink: "",
-        liveDemo: "",
-      };
-      const created = await adminCreateProject(payload, token);
+      const created = await adminCreateProject(
+        {
+          title,
+          description,
+          techStack: projectForm.techStack,
+          githubLink: projectForm.githubLink,
+          liveDemo: projectForm.liveDemo,
+        },
+        token
+      );
       setProjects((prev) => [
         ...prev,
         { ...created, techStackText: mapTechStackToText(created.techStack) },
       ]);
+      setProjectForm({ title: "", description: "", techStack: "", githubLink: "", liveDemo: "" });
       setInline("projects", "success", "Project created.");
     } catch (err) {
       setInline("projects", "error", err?.message || "Failed to create project.");
@@ -677,12 +704,22 @@ export default function AdminPage() {
     }
   }
 
-  async function handleSkillCreate() {
+  async function handleSkillCreate(event) {
+    event.preventDefault();
+    const category = String(skillForm.category || "").trim();
+    const name = String(skillForm.name || "").trim();
+
+    if (!category || !name) {
+      setInline("skills", "error", "Category and skill name are required.");
+      return;
+    }
+
     setLoading(true);
     clearInline("skills");
     try {
-      const created = await adminCreateSkill({ category: "New Category", name: "New Skill" }, token);
+      const created = await adminCreateSkill({ category, name }, token);
       setSkills((prev) => [...prev, created]);
+      setSkillForm({ category: "", name: "" });
       setInline("skills", "success", "Skill created.");
     } catch (err) {
       setInline("skills", "error", err?.message || "Failed to create skill.");
@@ -728,21 +765,38 @@ export default function AdminPage() {
     }
   }
 
-  async function handleEducationCreate() {
+  async function handleEducationCreate(event) {
+    event.preventDefault();
+    const institution = String(educationForm.institution || "").trim();
+    const program = String(educationForm.program || "").trim();
+    const description = String(educationForm.description || "").trim();
+    const sortOrder = Number(educationForm.sortOrder || 0);
+
+    if (!institution || !program || !description) {
+      setInline("education", "error", "Institution, program, and description are required.");
+      return;
+    }
+
+    if (!Number.isFinite(sortOrder) || sortOrder <= 0) {
+      setInline("education", "error", "Sort order must be a positive number.");
+      return;
+    }
+
     setLoading(true);
     clearInline("education");
     try {
       const created = await adminCreateEducation(
         {
-          institution: "New Institution",
-          program: "Program or certificate",
-          description: "Description",
-          statusTag: "",
-          sortOrder: education.length + 1,
+          institution,
+          program,
+          description,
+          statusTag: educationForm.statusTag,
+          sortOrder,
         },
         token
       );
       setEducation((prev) => [...prev, created]);
+      setEducationForm({ institution: "", program: "", description: "", statusTag: "", sortOrder: "" });
       setInline("education", "success", "Education created.");
     } catch (err) {
       setInline("education", "error", err?.message || "Failed to create education.");
@@ -1310,14 +1364,65 @@ export default function AdminPage() {
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Projects</h2>
-                    <button
-                      onClick={handleProjectCreate}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
-                    >
-                      Add project
-                    </button>
                   </div>
                   <InlineAlert message={inlineMessages.projects} />
+                  <form onSubmit={handleProjectCreate} className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-slate-950/20 p-4 lg:grid-cols-2">
+                    <label className="text-sm text-slate-300 lg:col-span-1">
+                      Title
+                      <input
+                        value={projectForm.title}
+                        onChange={(e) => setProjectForm((prev) => ({ ...prev, title: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Project title"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300 lg:col-span-1">
+                      Tech stack
+                      <input
+                        value={projectForm.techStack}
+                        onChange={(e) => setProjectForm((prev) => ({ ...prev, techStack: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="React, Node.js, PostgreSQL"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300 lg:col-span-2">
+                      Description
+                      <textarea
+                        rows={3}
+                        value={projectForm.description}
+                        onChange={(e) => setProjectForm((prev) => ({ ...prev, description: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Describe the project"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      GitHub URL
+                      <input
+                        value={projectForm.githubLink}
+                        onChange={(e) => setProjectForm((prev) => ({ ...prev, githubLink: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="https://github.com/..."
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Demo URL
+                      <input
+                        value={projectForm.liveDemo}
+                        onChange={(e) => setProjectForm((prev) => ({ ...prev, liveDemo: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="https://..."
+                      />
+                    </label>
+                    <div className="lg:col-span-2 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {loading ? "Saving..." : "Create project"}
+                      </button>
+                    </div>
+                  </form>
                   <div className="mt-5 space-y-5">
                     {projects.map((project) => (
                       <div
@@ -1432,14 +1537,37 @@ export default function AdminPage() {
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Skills</h2>
-                    <button
-                      onClick={handleSkillCreate}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
-                    >
-                      Add skill
-                    </button>
                   </div>
                   <InlineAlert message={inlineMessages.skills} />
+                  <form onSubmit={handleSkillCreate} className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-slate-950/20 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <label className="text-sm text-slate-300">
+                      Category
+                      <input
+                        value={skillForm.category}
+                        onChange={(e) => setSkillForm((prev) => ({ ...prev, category: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="e.g. Frameworks"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Skill name
+                      <input
+                        value={skillForm.name}
+                        onChange={(e) => setSkillForm((prev) => ({ ...prev, name: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="e.g. React"
+                      />
+                    </label>
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {loading ? "Saving..." : "Create skill"}
+                      </button>
+                    </div>
+                  </form>
                   <div className="mt-5 grid min-w-0 gap-4 md:grid-cols-2">
                     {skills.map((skill) => (
                       <div
@@ -1501,14 +1629,67 @@ export default function AdminPage() {
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-white/95">Education</h2>
-                    <button
-                      onClick={handleEducationCreate}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
-                    >
-                      Add education
-                    </button>
                   </div>
                   <InlineAlert message={inlineMessages.education} />
+                  <form onSubmit={handleEducationCreate} className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-slate-950/20 p-4 lg:grid-cols-2">
+                    <label className="text-sm text-slate-300">
+                      Institution
+                      <input
+                        value={educationForm.institution}
+                        onChange={(e) => setEducationForm((prev) => ({ ...prev, institution: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Institution name"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Program
+                      <input
+                        value={educationForm.program}
+                        onChange={(e) => setEducationForm((prev) => ({ ...prev, program: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Program or certificate"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300 lg:col-span-2">
+                      Description
+                      <textarea
+                        rows={3}
+                        value={educationForm.description}
+                        onChange={(e) => setEducationForm((prev) => ({ ...prev, description: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Describe the education item"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Status tag
+                      <input
+                        value={educationForm.statusTag}
+                        onChange={(e) => setEducationForm((prev) => ({ ...prev, statusTag: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Optional status"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Sort order
+                      <input
+                        type="number"
+                        min="1"
+                        value={educationForm.sortOrder}
+                        onChange={(e) => setEducationForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="1"
+                      />
+                    </label>
+                    <div className="lg:col-span-2 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {loading ? "Saving..." : "Create education"}
+                      </button>
+                    </div>
+                  </form>
                   <div className="mt-5 space-y-5">
                     {education.map((item) => (
                       <div
