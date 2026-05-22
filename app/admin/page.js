@@ -27,6 +27,9 @@ import {
   adminGetContacts,
   adminDeleteContact,
   adminGetSession,
+  adminGetAdmins,
+  adminCreateAdmin,
+  adminDeleteAdmin,
   adminGetCvMetadata,
   adminUploadCv,
   adminDeleteCv,
@@ -39,7 +42,7 @@ import {
   adminExportAuditLogs,
 } from "@/services/adminApi";
 
-const TABS = ["Profile", "Projects", "Skills", "Education", "Contacts", "Logs"];
+const TABS = ["Profile", "Projects", "Skills", "Education", "Contacts", "Admins", "Logs"];
 
 function InlineAlert({ message }) {
   if (!message?.text || message.type === "idle") return null;
@@ -165,6 +168,8 @@ export default function AdminPage() {
   const [skills, setSkills] = useState([]);
   const [education, setEducation] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [admins, setAdmins] = useState([]);
+  const [adminForm, setAdminForm] = useState({ email: "", password: "", durationValue: 30, durationUnit: "minutes" });
   const [profileImageFileName, setProfileImageFileName] = useState("");
   const [cvMeta, setCvMeta] = useState(null);
   const [cvEditing, setCvEditing] = useState(false);
@@ -174,6 +179,7 @@ export default function AdminPage() {
   const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
+  const [sessionInfo, setSessionInfo] = useState({ isSuperAdmin: false, adminExpiresAt: null });
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLogsTotal, setAuditLogsTotal] = useState(0);
   const [auditLogsPage, setAuditLogsPage] = useState(0);
@@ -209,6 +215,10 @@ export default function AdminPage() {
         const session = await adminGetSession(token);
         if (!isMounted) return;
         resetSessionClock(Number(session?.timeoutMs) || 300000);
+        setSessionInfo({
+          isSuperAdmin: !!session?.isSuperAdmin,
+          adminExpiresAt: session?.adminExpiresAt || null,
+        });
       } catch (err) {
         if (err?.status === 401) {
           clearAdminToken();
@@ -224,6 +234,17 @@ export default function AdminPage() {
       isMounted = false;
     };
   }, [resetSessionClock, setInline, token]);
+
+  useEffect(() => {
+    if (!token || activeTab !== "Admins" || !sessionInfo.isSuperAdmin) return;
+    void loadAdmins();
+  }, [activeTab, loadAdmins, sessionInfo.isSuperAdmin, token]);
+
+  useEffect(() => {
+    if (activeTab === "Admins" && !sessionInfo.isSuperAdmin) {
+      setActiveTab("Profile");
+    }
+  }, [activeTab, sessionInfo.isSuperAdmin]);
 
   useEffect(() => {
     if (!token) return;
@@ -746,6 +767,78 @@ export default function AdminPage() {
     }
   }
 
+  const loadAdmins = useCallback(async () => {
+    if (!token || !sessionInfo.isSuperAdmin) return;
+    try {
+      const rows = await adminGetAdmins(token);
+      setAdmins(rows || []);
+    } catch (err) {
+      if (err?.status === 403) {
+        setSessionInfo((prev) => ({ ...prev, isSuperAdmin: false }));
+        setAdmins([]);
+        return;
+      }
+      setInline("admins", "error", err?.message || "Failed to load admins.");
+    }
+  }, [sessionInfo.isSuperAdmin, setInline, token]);
+
+  async function handleAdminCreate(event) {
+    event.preventDefault();
+    clearInline("admins");
+
+    if (!sessionInfo.isSuperAdmin) {
+      setInline("admins", "error", "Super admin access required.");
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "").trim();
+    const durationValue = Number(form.get("durationValue") || 0);
+    const durationUnit = String(form.get("durationUnit") || "minutes").trim();
+
+    if (!email || !password) {
+      setInline("admins", "error", "Email and password are required.");
+      return;
+    }
+
+    if (!Number.isFinite(durationValue) || durationValue <= 0) {
+      setInline("admins", "error", "Duration must be a positive number.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const created = await adminCreateAdmin({ email, password, durationValue, durationUnit }, token);
+      setAdmins((prev) => [...prev.filter((item) => item.id !== created.id), created]);
+      setAdminForm({ email: "", password: "", durationValue: 30, durationUnit: "minutes" });
+      event.currentTarget.reset();
+      setInline("admins", "success", `Temporary admin created for ${toDateLabel(created.activeUntil)}.`);
+    } catch (err) {
+      setInline("admins", "error", err?.message || "Failed to create admin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAdminDelete(adminId, adminEmail) {
+    if (!adminId) return;
+    const confirmed = window.confirm(`Delete temporary admin ${adminEmail}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    clearInline("admins");
+    try {
+      await adminDeleteAdmin(adminId, token);
+      setAdmins((prev) => prev.filter((admin) => admin.id !== adminId));
+      setInline("admins", "success", "Admin deleted.");
+    } catch (err) {
+      setInline("admins", "error", err?.message || "Failed to delete admin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadAuditLogs(page = 0) {
     if (!token) return;
     setAuditLogsLoading(true);
@@ -837,6 +930,18 @@ export default function AdminPage() {
               <h1 className="mt-2 break-words text-2xl font-extrabold text-white sm:text-3xl">
                 Portfolio Control Room
               </h1>
+              {!showAuth && (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-300">
+                    {sessionInfo.isSuperAdmin ? "Super admin" : "Admin"}
+                  </span>
+                  {sessionInfo.adminExpiresAt ? (
+                    <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-amber-100">
+                      Access ends {toDateLabel(sessionInfo.adminExpiresAt)}
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
             {!showAuth && (
               <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
@@ -905,7 +1010,7 @@ export default function AdminPage() {
           ) : (
             <>
               <div className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-                {TABS.map((tab) => (
+                {TABS.filter((tab) => tab !== "Admins" || sessionInfo.isSuperAdmin).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -1482,6 +1587,135 @@ export default function AdminPage() {
                             </td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ) : null}
+
+              {activeTab === "Admins" && sessionInfo.isSuperAdmin ? (
+                <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
+                      <h2 className="text-lg font-semibold text-white/95">Temporary Admins</h2>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Create time-limited admins that can manage portfolio content but cannot remove the super admin.
+                      </p>
+                    </div>
+                    <button
+                      onClick={loadAdmins}
+                      disabled={loading}
+                      className="w-fit rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                    >
+                      Refresh admins
+                    </button>
+                  </div>
+
+                  <InlineAlert message={inlineMessages.admins} />
+
+                  <form onSubmit={handleAdminCreate} className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-slate-950/20 p-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_10rem_10rem_auto]">
+                    <label className="text-sm text-slate-300">
+                      Email
+                      <input
+                        name="email"
+                        type="email"
+                        value={adminForm.email}
+                        onChange={(e) => setAdminForm((prev) => ({ ...prev, email: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="new-admin@example.com"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Password
+                      <input
+                        name="password"
+                        type="password"
+                        value={adminForm.password}
+                        onChange={(e) => setAdminForm((prev) => ({ ...prev, password: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                        placeholder="Temporary password"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Duration
+                      <input
+                        name="durationValue"
+                        type="number"
+                        min="1"
+                        value={adminForm.durationValue}
+                        onChange={(e) => setAdminForm((prev) => ({ ...prev, durationValue: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                      />
+                    </label>
+                    <label className="text-sm text-slate-300">
+                      Unit
+                      <select
+                        name="durationUnit"
+                        value={adminForm.durationUnit}
+                        onChange={(e) => setAdminForm((prev) => ({ ...prev, durationUnit: e.target.value }))}
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white"
+                      >
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="rounded-xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50"
+                    >
+                      {loading ? "Saving..." : "Create admin"}
+                    </button>
+                  </form>
+
+                  <div className="mt-6 -mx-1 max-w-full overflow-x-auto px-1 sm:mx-0 sm:px-0">
+                    <table className="min-w-[900px] w-full text-left text-sm">
+                      <thead className="text-xs uppercase text-slate-400">
+                        <tr>
+                          <th className="px-3 py-2">Email</th>
+                          <th className="px-3 py-2">Role</th>
+                          <th className="px-3 py-2">Expires</th>
+                          <th className="px-3 py-2">Created By</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {admins.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="px-3 py-4 text-center text-slate-400">
+                              No temporary admins yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          admins.map((admin) => (
+                            <tr key={admin.id} className="border-t border-white/10">
+                              <td className="max-w-[16rem] break-all px-3 py-2 text-slate-200">{admin.email}</td>
+                              <td className="px-3 py-2 text-slate-300">{admin.isSuperAdmin ? "Super admin" : admin.role || "ADMIN"}</td>
+                              <td className="px-3 py-2 text-slate-300">{admin.activeUntil ? toDateLabel(admin.activeUntil) : "Never"}</td>
+                              <td className="px-3 py-2 text-slate-300">{admin.createdBy || "-"}</td>
+                              <td className="px-3 py-2">
+                                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${admin.isExpired ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>
+                                  {admin.isExpired ? "Expired" : "Active"}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                {admin.isSuperAdmin ? (
+                                  <span className="text-xs text-slate-500">Protected</span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleAdminDelete(admin.id, admin.email)}
+                                    disabled={loading}
+                                    className="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-2 text-sm font-semibold text-rose-100 disabled:opacity-50"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>

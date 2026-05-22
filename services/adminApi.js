@@ -148,6 +148,18 @@ export async function adminGetSession(token) {
   return adminFetch("/api/admin/session", { token });
 }
 
+export async function adminGetAdmins(token) {
+  return adminFetch("/api/admin/admins", { token });
+}
+
+export async function adminCreateAdmin(payload, token) {
+  return adminFetch("/api/admin/admins", { method: "POST", body: payload, token });
+}
+
+export async function adminDeleteAdmin(id, token) {
+  return adminFetch(`/api/admin/admins/${id}`, { method: "DELETE", token });
+}
+
 export async function adminGetCvMetadata(token) {
   return adminFetch("/api/admin/cv", { token });
 }
