@@ -205,6 +205,21 @@ export default function AdminPage() {
     setSessionRemainingMs(safeTimeout);
   }, []);
 
+  const loadAdmins = useCallback(async () => {
+    if (!token || !sessionInfo.isSuperAdmin) return;
+    try {
+      const rows = await adminGetAdmins(token);
+      setAdmins(rows || []);
+    } catch (err) {
+      if (err?.status === 403) {
+        setSessionInfo((prev) => ({ ...prev, isSuperAdmin: false }));
+        setAdmins([]);
+        return;
+      }
+      setInline("admins", "error", err?.message || "Failed to load admins.");
+    }
+  }, [sessionInfo.isSuperAdmin, setInline, token]);
+
   useEffect(() => {
     if (!token) return;
 
@@ -766,21 +781,6 @@ export default function AdminPage() {
       setLoading(false);
     }
   }
-
-  const loadAdmins = useCallback(async () => {
-    if (!token || !sessionInfo.isSuperAdmin) return;
-    try {
-      const rows = await adminGetAdmins(token);
-      setAdmins(rows || []);
-    } catch (err) {
-      if (err?.status === 403) {
-        setSessionInfo((prev) => ({ ...prev, isSuperAdmin: false }));
-        setAdmins([]);
-        return;
-      }
-      setInline("admins", "error", err?.message || "Failed to load admins.");
-    }
-  }, [sessionInfo.isSuperAdmin, setInline, token]);
 
   async function handleAdminCreate(event) {
     event.preventDefault();
