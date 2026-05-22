@@ -4,7 +4,7 @@ import Container from "@/components/Container";
 import Reveal from "@/components/Reveal";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Github, Linkedin, Mail, Phone } from "lucide-react";
+import { Github, Linkedin, Mail, MessageCircle, Phone } from "lucide-react";
 import { submitContact } from "@/services/api";
 
 function LoadingDot() {
@@ -17,12 +17,43 @@ function LoadingDot() {
   );
 }
 
+function normalizePhoneForWhatsApp(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+
+  // Keep the number as-is when it already includes a country code.
+  if (digits.length > 10) return digits;
+
+  // Fallback for local numbers that start with 0.
+  return digits.startsWith("0") ? `255${digits.slice(1)}` : digits;
+}
+
+function buildWhatsAppLink(phone) {
+  const normalized = normalizePhoneForWhatsApp(phone);
+  if (!normalized) return "";
+
+  const text = encodeURIComponent(
+    "Hello Dickens, I found your portfolio and would like to get in touch."
+  );
+  return `https://wa.me/${normalized}?text=${text}`;
+}
+
+function buildMailtoLink(email) {
+  const normalizedEmail = String(email || "").trim();
+  if (!normalizedEmail) return "";
+
+  const subject = encodeURIComponent("Portfolio inquiry");
+  const body = encodeURIComponent("Hello Dickens,\n\nI would like to get in touch about your portfolio.");
+  return `mailto:${normalizedEmail}?subject=${subject}&body=${body}`;
+}
+
 export function ContactSection({ profile }) {
   const email = profile?.email ?? "dickensmanyama8@gmail.com";
   const phones = profile?.phoneNumbers ?? ["0679 165 468", "0692 501 112"];
   const githubUrl = profile?.githubUrl ?? "https://github.com/Dickens-Manyama";
   const linkedInUrl =
     profile?.linkedinUrl ?? "https://www.linkedin.com/in/dickens-manyama-560450327";
+  const mailtoLink = buildMailtoLink(email);
 
   const [name, setName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -98,20 +129,34 @@ export function ContactSection({ profile }) {
 
               <div className="mt-5 space-y-4">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
-                  <div className="flex items-center gap-3">
+                  <a
+                    href={mailtoLink}
+                    target="_self"
+                    className="flex items-center gap-3 transition hover:text-indigo-200"
+                    aria-label={`Send email to ${email}`}
+                  >
                     <Mail size={18} className="text-indigo-200" />
-                    <p className="break-words text-sm font-semibold text-white/95">{email}</p>
-                  </div>
+                    <span className="break-words text-sm font-semibold text-white/95">
+                      {email}
+                    </span>
+                  </a>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
                   <div className="flex items-start gap-3">
                     <Phone size={18} className="text-indigo-200" />
-                    <div className="min-w-0 space-y-1">
+                    <div className="min-w-0 space-y-2">
                       {phones.map((p) => (
-                        <p key={p} className="break-words text-sm font-semibold text-white/95">
-                          {p}
-                        </p>
+                        <a
+                          key={p}
+                          href={buildWhatsAppLink(p)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 break-words text-sm font-semibold text-white/95 transition hover:text-green-300"
+                        >
+                          <MessageCircle size={16} className="shrink-0 text-green-300" />
+                          <span>{p}</span>
+                        </a>
                       ))}
                     </div>
                   </div>
