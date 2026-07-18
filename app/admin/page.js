@@ -1268,7 +1268,7 @@ export default function AdminPage() {
                             <img
                               src={profileForm.profileImageUrl}
                               alt="Profile preview"
-                              className="h-full w-full object-cover"
+                              className="h-full w-full object-contain"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-slate-400">

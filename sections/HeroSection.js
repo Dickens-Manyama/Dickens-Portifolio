@@ -24,7 +24,7 @@ function HeroPortrait({ src, name }) {
           <img
             src={src}
             alt={`Portrait of ${name}`}
-            className="h-full w-full object-cover object-center grayscale transition duration-500 hover:grayscale-0"
+            className="h-full w-full object-contain object-center grayscale transition duration-500 hover:grayscale-0"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-wine">
