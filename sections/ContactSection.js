@@ -1,37 +1,22 @@
 "use client";
 
 import Container from "@/components/Container";
-import Reveal from "@/components/Reveal";
+import SectionHeading from "@/components/SectionHeading";
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Github, Linkedin, Mail, MessageCircle, Phone } from "lucide-react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { Github, Linkedin, Mail, MessageCircle, Phone, Send } from "lucide-react";
 import { submitContact } from "@/services/api";
-
-function LoadingDot() {
-  return (
-    <span className="inline-flex items-center gap-1" aria-hidden="true">
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-950" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-950 [animation-delay:0.12s]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-950 [animation-delay:0.24s]" />
-    </span>
-  );
-}
 
 function normalizePhoneForWhatsApp(phone) {
   const digits = String(phone || "").replace(/\D/g, "");
   if (!digits) return "";
-
-  // Keep the number as-is when it already includes a country code.
   if (digits.length > 10) return digits;
-
-  // Fallback for local numbers that start with 0.
   return digits.startsWith("0") ? `255${digits.slice(1)}` : digits;
 }
 
 function buildWhatsAppLink(phone) {
   const normalized = normalizePhoneForWhatsApp(phone);
   if (!normalized) return "";
-
   const text = encodeURIComponent(
     "Hello Dickens, I found your portfolio and would like to get in touch."
   );
@@ -41,11 +26,15 @@ function buildWhatsAppLink(phone) {
 function buildMailtoLink(email) {
   const normalizedEmail = String(email || "").trim();
   if (!normalizedEmail) return "";
-
   const subject = encodeURIComponent("Portfolio inquiry");
-  const body = encodeURIComponent("Hello Dickens,\n\nI would like to get in touch about your portfolio.");
+  const body = encodeURIComponent(
+    "Hello Dickens,\n\nI would like to get in touch about your portfolio."
+  );
   return `mailto:${normalizedEmail}?subject=${subject}&body=${body}`;
 }
+
+const inputClasses =
+  "mt-2 w-full border-2 border-ink bg-paper px-4 py-3 text-sm text-ink placeholder:text-ink-faint outline-none transition-shadow focus:shadow-hard-sm focus:border-punch";
 
 export function ContactSection({ profile }) {
   const email = profile?.email ?? "dickensmanyama8@gmail.com";
@@ -60,6 +49,7 @@ export function ContactSection({ profile }) {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: "idle", text: "" });
+  const [statusParent] = useAutoAnimate({ duration: 200 });
 
   const submitDisabled = useMemo(() => {
     return !name.trim() || !contactEmail.trim() || !message.trim() || submitting;
@@ -87,196 +77,174 @@ export function ContactSection({ profile }) {
       setContactEmail("");
       setMessage("");
     } catch (err) {
-      const messageText = err?.data?.message || err?.message || "Something went wrong. Please try again.";
-      setStatus({
-        type: "error",
-        text: messageText,
-      });
+      const messageText =
+        err?.data?.message || err?.message || "Something went wrong. Please try again.";
+      setStatus({ type: "error", text: messageText });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <section id="contact" className="py-16 md:py-20">
+    <section id="contact" className="py-20 md:py-28">
       <Container>
-        <Reveal>
-          <div>
-            <p className="text-sm font-semibold tracking-wide text-indigo-300">Contact</p>
-            <h2 className="mt-2 text-3xl font-extrabold text-white md:text-4xl">
-              Let&apos;s build something reliable
-            </h2>
-            <p className="mt-3 max-w-2xl text-slate-300">
-              Send a message using the form, or reach out directly via email/phone.
-            </p>
-          </div>
-        </Reveal>
+        <SectionHeading
+          number="05"
+          label="Contact"
+          title="Let's build something reliable"
+          description="Send a message using the form, or reach out directly via email, WhatsApp, or socials."
+        />
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-12">
+        <div className="mt-12 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-soft"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-white/95">Direct contact</p>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
-                  Responsive
-                </span>
+            <div className="border-2 border-ink bg-paper shadow-hard">
+              <div className="border-b-2 border-ink bg-lime px-6 py-4">
+                <p className="font-display text-sm font-bold uppercase tracking-[0.18em] text-ink">
+                  Direct contact
+                </p>
               </div>
 
-              <div className="mt-5 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
-                  <a
-                    href={mailtoLink}
-                    target="_self"
-                    className="flex items-center gap-3 transition hover:text-indigo-200"
-                    aria-label={`Send email to ${email}`}
-                  >
-                    <Mail size={18} className="text-indigo-200" />
-                    <span className="break-words text-sm font-semibold text-white/95">
-                      {email}
-                    </span>
-                  </a>
-                </div>
+              <div className="space-y-5 p-6">
+                <a
+                  href={mailtoLink}
+                  className="group flex items-center gap-4"
+                  aria-label={`Send email to ${email}`}
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-ink bg-paper transition-colors group-hover:bg-punch">
+                    <Mail size={18} className="text-ink transition-colors group-hover:text-paper" />
+                  </span>
+                  <span className="break-all text-sm font-bold text-ink group-hover:text-wine">
+                    {email}
+                  </span>
+                </a>
 
-                <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
-                  <div className="flex items-start gap-3">
-                    <Phone size={18} className="text-indigo-200" />
-                    <div className="min-w-0 space-y-2">
-                      {phones.map((p) => (
-                        <a
-                          key={p}
-                          href={buildWhatsAppLink(p)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-2 break-words text-sm font-semibold text-white/95 transition hover:text-green-300"
-                        >
-                          <MessageCircle size={16} className="shrink-0 text-green-300" />
-                          <span>{p}</span>
-                        </a>
-                      ))}
-                    </div>
+                <div className="flex items-start gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-ink bg-paper">
+                    <Phone size={18} className="text-ink" />
+                  </span>
+                  <div className="space-y-2 pt-1">
+                    {phones.map((p) => (
+                      <a
+                        key={p}
+                        href={buildWhatsAppLink(p)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 text-sm font-bold text-ink transition-colors hover:text-wine"
+                      >
+                        <MessageCircle size={15} className="shrink-0 text-punch" />
+                        <span>{p}</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 border-t-2 border-ink/15 pt-5">
                   <a
                     href={githubUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
+                    className="inline-flex items-center gap-2 border-2 border-ink bg-ink px-4 py-2 font-display text-sm font-bold text-paper transition-colors hover:bg-wine"
                   >
-                    <Github size={18} />
+                    <Github size={16} />
                     GitHub
                   </a>
                   <a
                     href={linkedInUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
+                    className="inline-flex items-center gap-2 border-2 border-ink bg-paper px-4 py-2 font-display text-sm font-bold text-ink transition-colors hover:bg-lime"
                   >
-                    <Linkedin size={18} />
+                    <Linkedin size={16} />
                     LinkedIn
                   </a>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
 
           <div className="lg:col-span-7">
-            <motion.form
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.05 }}
-              onSubmit={onSubmit}
-              className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-soft"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-white/95">Send a message</p>
-
-                </div>
-                <span className="text-xs font-semibold text-slate-200 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <form onSubmit={onSubmit} className="border-2 border-ink bg-paper shadow-hard">
+              <div className="flex items-center justify-between border-b-2 border-ink bg-wine px-6 py-4">
+                <p className="font-display text-sm font-bold uppercase tracking-[0.18em] text-paper">
+                  Send a message
+                </p>
+                <span className="border-2 border-lime px-3 py-0.5 font-display text-xs font-bold uppercase text-lime">
                   {submitting ? "Sending..." : "Ready"}
                 </span>
               </div>
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-semibold text-slate-300">Name</span>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-indigo-400/40"
-                    placeholder="Your name"
-                    autoComplete="name"
+              <div className="p-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="font-display text-xs font-bold uppercase tracking-wide text-ink">
+                      Name
+                    </span>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputClasses}
+                      placeholder="Your name"
+                      autoComplete="name"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="font-display text-xs font-bold uppercase tracking-wide text-ink">
+                      Email
+                    </span>
+                    <input
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className={inputClasses}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      inputMode="email"
+                    />
+                  </label>
+                </div>
+
+                <label className="mt-4 block">
+                  <span className="font-display text-xs font-bold uppercase tracking-wide text-ink">
+                    Message
+                  </span>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={5}
+                    className={`${inputClasses} resize-none`}
+                    placeholder="Write your message..."
                   />
                 </label>
 
-                <label className="block">
-                  <span className="text-xs font-semibold text-slate-300">Email</span>
-                  <input
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-indigo-400/40"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    inputMode="email"
-                  />
-                </label>
-              </div>
-
-              <label className="mt-4 block">
-                <span className="text-xs font-semibold text-slate-300">Message</span>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={5}
-                  className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus:border-indigo-400/40"
-                  placeholder="Write your message..."
-                />
-              </label>
-
-              <div className="mt-5 flex flex-col gap-3">
-                <motion.button
-                  type="submit"
-                  whileHover={submitDisabled ? {} : { scale: 1.01 }}
-                  whileTap={submitDisabled ? {} : { scale: 0.99 }}
-                  disabled={submitDisabled}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 shadow-soft transition disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <LoadingDot />
-                      Sending
-                    </>
-                  ) : (
-                    "Submit"
-                  )}
-                </motion.button>
-
-                {status.type !== "idle" && (
-                  <div
-                    role="status"
-                    className={[
-                      "rounded-2xl border px-4 py-3 text-sm shadow-soft",
-                      status.type === "success"
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
-                        : "border-rose-400/30 bg-rose-400/10 text-rose-100",
-                    ].join(" ")}
+                <div ref={statusParent} className="mt-5 flex flex-col gap-3">
+                  <button
+                    type="submit"
+                    disabled={submitDisabled}
+                    className="inline-flex items-center justify-center gap-2 border-2 border-ink bg-punch px-6 py-3.5 font-display text-sm font-bold uppercase tracking-wide text-paper shadow-hard transition-transform enabled:hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {status.text}
-                  </div>
-                )}
+                    <Send size={16} />
+                    {submitting ? "Sending..." : "Send message"}
+                  </button>
+
+                  {status.type !== "idle" && (
+                    <div
+                      role="status"
+                      className={[
+                        "border-2 px-4 py-3 text-sm font-semibold",
+                        status.type === "success"
+                          ? "border-ink bg-lime text-ink"
+                          : "border-punch bg-punch/10 text-wine",
+                      ].join(" ")}
+                    >
+                      {status.text}
+                    </div>
+                  )}
+                </div>
               </div>
-            </motion.form>
+            </form>
           </div>
         </div>
       </Container>
     </section>
   );
 }
-

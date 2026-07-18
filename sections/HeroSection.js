@@ -1,50 +1,91 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
-import Container from "@/components/Container";
-import Reveal from "@/components/Reveal";
-import TypingEffect from "@/components/TypingEffect";
-import { ArrowRight, Download } from "lucide-react";
-import { SkeletonCard } from "@/components/SkeletonCard";
+import { ArrowDownRight, Download, ArrowUpRight } from "lucide-react";
 import { downloadCvFile } from "@/lib/downloadCv";
 import { getCvDownloadFilename, getCvDownloadHref, hasUploadedCv } from "@/lib/cvUrls";
-import portraitImage from "../my potrait.jpeg";
 
-function HeroPortrait({ src }) {
-  const isStringSource = typeof src === "string";
+function HeroPortrait({ src, name }) {
+  const isStringSource = typeof src === "string" && src.length > 0;
+  const initials = String(name || "DM")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   return (
-    <div className="group relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/40 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
-      {isStringSource ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt="Portrait of Dickens Manyama"
-          className="h-full w-full object-contain object-center transition duration-500 ease-out group-hover:scale-[1.02]"
-        />
-      ) : (
-        <Image
-          src={src}
-          alt="Portrait of Dickens Manyama"
-          fill
-          priority
-          className="object-contain object-center transition duration-500 ease-out group-hover:scale-[1.02]"
-          sizes="(max-width: 1024px) 22rem, 26rem"
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/15 via-transparent to-transparent" />
+    <div className="relative">
+      <div className="absolute -bottom-3 -right-3 h-full w-full border-2 border-ink bg-wine" aria-hidden="true" />
+      <div className="absolute -top-3 -left-3 h-full w-full border-2 border-ink bg-lime" aria-hidden="true" />
+      <div className="relative aspect-[4/5] w-full overflow-hidden border-2 border-ink bg-paper">
+        {isStringSource ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={`Portrait of ${name}`}
+            className="h-full w-full object-cover object-center grayscale transition duration-500 hover:grayscale-0"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-wine">
+            <span className="font-display text-7xl font-bold text-lime sm:text-8xl">{initials}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const ROLE_TAG_STYLES = [
+  "border-2 border-ink bg-ink text-paper rotate-[-1.5deg]",
+  "border-2 border-ink bg-lime text-ink rotate-[1deg]",
+  "border-2 border-ink bg-wine text-paper rotate-[-1deg]",
+];
+
+function RoleTags({ titles }) {
+  return (
+    <div className="mt-7 flex flex-wrap items-center gap-3">
+      {titles.map((title, idx) => (
+        <motion.span
+          key={title}
+          initial={{ opacity: 0, y: 14, rotate: 0 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.22 + idx * 0.12, ease: "easeOut" }}
+          whileHover={{ rotate: 0, y: -3 }}
+          className={[
+            "inline-block px-4 py-2 font-display text-sm font-bold uppercase tracking-wide shadow-hard-sm transition-transform sm:text-base",
+            ROLE_TAG_STYLES[idx % ROLE_TAG_STYLES.length],
+          ].join(" ")}
+        >
+          {title}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
+
+function MarqueeStrip({ items }) {
+  const row = items.join("  ✦  ");
+  return (
+    <div className="mt-16 overflow-hidden border-y-2 border-ink bg-lime py-3 md:mt-24">
+      <div className="flex w-max animate-marquee whitespace-nowrap font-display text-sm font-bold uppercase tracking-[0.25em] text-ink">
+        <span className="px-4">{row}  ✦  {row}</span>
+        <span className="px-4">{row}  ✦  {row}</span>
+      </div>
     </div>
   );
 }
 
 export function HeroSection({ profile }) {
-  const name = profile?.name ?? "DICKENS DEUS MANYAMA";
+  const name = profile?.name ?? "Dickens Deus Manyama";
   const titles = profile?.titles ?? ["Software Developer", "Data Scientist", "IT Systems & Networking"];
   const intro = profile?.professionalSummary ?? "";
-  const portraitSrc = profile?.profileImageUrl || portraitImage;
+  const portraitSrc = profile?.profileImageUrl || null;
   const cvHref = hasUploadedCv(profile) ? getCvDownloadHref(profile) : "/Dickens_Manyama_CV.pdf";
   const cvDownloadName = getCvDownloadFilename(profile);
+
+  const [firstName, ...restNames] = name.split(" ");
+  const lastName = restNames.length ? restNames[restNames.length - 1] : "";
 
   async function handleCvDownload(e) {
     e.preventDefault();
@@ -60,160 +101,110 @@ export function HeroSection({ profile }) {
   }
 
   return (
-    <section id="home" className="relative pt-16 md:pt-24">
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-0 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-500/20 via-violet-500/15 to-cyan-400/15 blur-3xl animate-pulse" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.35),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.25),transparent_45%),radial-gradient(circle_at_50%_90%,rgba(34,211,238,0.2),transparent_45%)]" />
+    <section id="home" className="relative overflow-hidden pt-24 sm:pt-28 md:pt-36">
+      <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-12 lg:items-center lg:px-8">
+        <div className="lg:col-span-7">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 border-2 border-ink bg-paper px-3 py-1.5 shadow-hard-sm"
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-punch" />
+            <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-ink">
+              Available for work
+            </span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="mt-6 break-words font-display font-bold uppercase leading-[0.95] tracking-tight text-ink"
+          >
+            <span className="block text-[2.6rem] sm:text-7xl md:text-8xl">{firstName}</span>
+            <span className="text-outline block text-[2.6rem] sm:text-7xl md:text-8xl">{lastName}</span>
+          </motion.h1>
+
+          <RoleTags titles={titles} />
+
+          {intro ? (
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="mt-6 max-w-xl text-base leading-relaxed text-ink-soft md:text-lg"
+            >
+              {intro}
+            </motion.p>
+          ) : null}
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="mt-8 flex flex-wrap items-center gap-4"
+          >
+            <a
+              href="#projects"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="group inline-flex items-center gap-2 border-2 border-ink bg-punch px-5 py-3 font-display text-sm font-bold uppercase tracking-wide text-paper shadow-hard transition-transform hover:-translate-y-1 hover:translate-x-0.5 sm:px-6 sm:py-3.5"
+            >
+              View Projects
+              <ArrowDownRight size={18} className="transition-transform group-hover:rotate-45" />
+            </a>
+
+            <a
+              href={cvHref}
+              onClick={handleCvDownload}
+              className="inline-flex items-center gap-2 border-2 border-ink bg-paper px-5 py-3 font-display text-sm font-bold uppercase tracking-wide text-ink shadow-hard transition-transform hover:-translate-y-1 hover:bg-lime sm:px-6 sm:py-3.5"
+            >
+              <Download size={18} />
+              Download CV
+            </a>
+
+            <a
+              href="#contact"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("contact")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="link-sweep inline-flex items-center gap-1 px-1 py-1 font-display text-sm font-bold uppercase tracking-wide text-ink"
+            >
+              Contact me <ArrowUpRight size={16} />
+            </a>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mx-auto w-full max-w-xs px-3 sm:max-w-sm sm:px-0 lg:col-span-5"
+        >
+          <HeroPortrait src={portraitSrc} name={name} />
+
+          <div className="mt-8 grid grid-cols-2 border-2 border-ink shadow-hard">
+            <div className="border-r-2 border-ink bg-paper p-3 sm:p-4">
+              <p className="font-display text-lg font-bold text-ink sm:text-2xl">Full-stack</p>
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-ink-soft sm:text-xs">
+                APIs, apps & automation
+              </p>
+            </div>
+            <div className="bg-wine p-3 sm:p-4">
+              <p className="font-display text-lg font-bold text-lime sm:text-2xl">Data & ML</p>
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-paper/80 sm:text-xs">
+                Analysis to insight
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
-      <Container className="grid gap-12 lg:grid-cols-12 lg:items-center">
-        <div className="lg:col-span-7 xl:col-span-6">
-          <Reveal>
-            <motion.div
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 backdrop-blur-md"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
-            >
-              <span className="h-2 w-2 rounded-full bg-gradient-to-r from-indigo-400 to-violet-400 shadow-[0_0_20px_rgba(99,102,241,0.6)]" />
-              <span>Available for hands-on development & data-driven automation</span>
-            </motion.div>
-          </Reveal>
-
-          <Reveal delay={0.08}>
-            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
-              {name}
-            </h1>
-          </Reveal>
-
-          <Reveal delay={0.15}>
-            <p className="mt-3 text-lg text-slate-200 md:text-2xl">
-              <span className="text-slate-300">I&apos;m </span>
-              <TypingEffect words={titles} />
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.22}>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 md:text-lg">
-              {intro}
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.28}>
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <a
-                href="#projects"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("projects")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 shadow-soft transition hover:opacity-95"
-              >
-                View Projects
-                <ArrowRight className="transition group-hover:translate-x-0.5" size={18} />
-              </a>
-
-              <a
-                href={cvHref}
-                onClick={handleCvDownload}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
-              >
-                <Download size={18} />
-                Download CV
-              </a>
-
-              <a
-                href="#contact"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100 backdrop-blur-md transition hover:bg-white/10"
-              >
-                Contact Me
-              </a>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.34}>
-            <div className="mt-9 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-                <p className="text-xs text-slate-400">Focus</p>
-                <p className="mt-1 text-sm font-semibold text-white/95">Cloud-ready APIs & automation</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-                <p className="text-xs text-slate-400">Data</p>
-                <p className="mt-1 text-sm font-semibold text-white/95">ML, analysis & visualization</p>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-
-        <div className="lg:col-span-5 xl:col-span-6">
-          <Reveal delay={0.12}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, ease: "easeOut", delay: 0.05 }}
-              className="relative"
-            >
-              <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-tr from-indigo-500/20 via-violet-500/20 to-cyan-400/20 blur-lg" />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-soft">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_40%)]" />
-                <div className="relative flex flex-col gap-5">
-                  <div className="mx-auto flex w-full max-w-[22rem] items-center justify-center sm:max-w-[24rem] lg:max-w-[26rem]">
-                    <HeroPortrait src={portraitSrc} />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Profile</p>
-                        <p className="mt-1 text-sm font-semibold text-white/95">{profile?.name ?? name}</p>
-                      </div>
-                      <div className="hidden rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs text-slate-200 sm:block">
-                        Final-year DS
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      {profile ? (
-                        <>
-                          <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-                            <p className="text-xs text-slate-400">Email</p>
-                            <p className="mt-1 break-words text-sm font-semibold text-white/95">
-                              {profile.email}
-                            </p>
-                          </div>
-                          <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-                            <p className="text-xs text-slate-400">Phone</p>
-                            <p className="mt-1 break-words text-sm font-semibold text-white/95">
-                              {profile.phoneNumbers?.[0] ?? "—"}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <SkeletonCard className="h-24" />
-                          <SkeletonCard className="h-24" />
-                        </>
-                      )}
-                    </div>
-
-                    <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs text-slate-400">Quick highlight</p>
-                      <p className="mt-2 text-sm font-semibold text-white/95">
-                        Building reliable systems, integrating APIs, and making data actionable.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </Reveal>
-        </div>
-      </Container>
+      <MarqueeStrip items={titles} />
     </section>
   );
 }
-

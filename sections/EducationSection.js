@@ -1,80 +1,77 @@
 "use client";
 
 import Container from "@/components/Container";
-import Reveal from "@/components/Reveal";
+import SectionHeading from "@/components/SectionHeading";
 import { motion } from "framer-motion";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { GraduationCap } from "lucide-react";
+import { SkeletonCard } from "@/components/SkeletonCard";
 
 export function EducationSection({ education, loading }) {
+  const [listParent] = useAutoAnimate({ duration: 250 });
   const items = education ?? [];
+
   return (
-    <section id="education" className="py-16 md:py-20">
+    <section id="education" className="border-y-2 border-ink bg-wine py-20 md:py-28">
       <Container>
-        <Reveal>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 via-violet-500/15 to-cyan-400/15 border border-white/10">
-              <GraduationCap size={18} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-indigo-300">Education</p>
-              <h2 className="mt-2 text-3xl font-extrabold text-white md:text-4xl">
-                Learning, building, iterating
-              </h2>
-            </div>
-          </div>
-        </Reveal>
+        <div className="flex items-baseline gap-4">
+          <span className="font-display text-sm font-bold tracking-[0.2em] text-lime">04</span>
+          <span className="font-display text-sm font-bold uppercase tracking-[0.2em] text-lime">
+            Education
+          </span>
+          <span className="h-px flex-1 bg-paper/25" aria-hidden="true" />
+        </div>
+        <h2 className="mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight text-paper md:text-5xl">
+          Learning, building, iterating
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-paper/75">
+          Data science training combined with hands-on software development to deliver end-to-end,
+          production-ready work.
+        </p>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <Reveal delay={0.1}>
-              <p className="text-slate-300">
-                Data science training combined with hands-on software development to deliver end-to-end,
-                production-ready work.
-              </p>
-            </Reveal>
-          </div>
-
-          <div className="lg:col-span-7">
-            <div className="relative pl-6">
-              <div className="absolute left-3 top-2 bottom-2 w-px bg-white/10" />
-              {loading ? (
-                <div className="space-y-6">
-                  {new Array(3).fill(0).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="h-20 rounded-3xl border border-white/10 bg-white/5 p-5"
-                    />
-                  ))}
+        <div ref={listParent} className="mt-12 space-y-0">
+          {loading ? (
+            <div className="space-y-4">
+              {new Array(3).fill(0).map((_, idx) => (
+                <SkeletonCard key={idx} className="h-24 !border-paper/25 !bg-paper/10" />
+              ))}
+            </div>
+          ) : (
+            items.map((item, idx) => (
+              <motion.div
+                key={`${item.institution}-${item.program}-${idx}`}
+                initial={{ opacity: 0, x: -16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.45, delay: idx * 0.06 }}
+                className="group grid gap-4 border-b-2 border-paper/20 py-6 transition-colors first:border-t-2 hover:bg-paper/5 lg:grid-cols-12 lg:items-center lg:px-4"
+              >
+                <div className="flex items-start gap-4 lg:col-span-6 lg:items-center">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-paper bg-lime text-ink transition-transform group-hover:rotate-6">
+                    <GraduationCap size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display text-lg font-bold leading-snug text-paper">
+                      {item.institution}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-lime">{item.program}</p>
+                  </div>
                 </div>
-              ) : (
-                items.map((item, idx) => (
-                  <motion.div
-                    key={`${item.institution}-${item.program}-${idx}`}
-                    initial={{ opacity: 0, x: -10 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: idx * 0.05 }}
-                    viewport={{ once: true, amount: 0.25 }}
-                    className="relative mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
-                  >
-                    <div className="absolute left-[-1.2rem] top-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-                      <span className="h-2 w-2 rounded-full bg-indigo-300" />
-                    </div>
-                    <p className="text-sm font-semibold text-white/95">{item.institution}</p>
-                    <p className="mt-1 text-sm text-slate-300">{item.program}</p>
-                    <p className="mt-2 text-xs text-slate-400">{item.description}</p>
-                    {item.statusTag ? (
-                      <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
-                        {item.statusTag}
-                      </div>
-                    ) : null}
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </div>
+                <div className="lg:col-span-4">
+                  <p className="text-sm leading-relaxed text-paper/75">{item.description}</p>
+                </div>
+                <div className="lg:col-span-2 lg:text-right">
+                  {item.statusTag ? (
+                    <span className="inline-block border-2 border-lime px-3 py-1 font-display text-xs font-bold uppercase tracking-wide text-lime">
+                      {item.statusTag}
+                    </span>
+                  ) : null}
+                </div>
+              </motion.div>
+            ))
+          )}
         </div>
       </Container>
     </section>
   );
 }
-

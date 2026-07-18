@@ -3,7 +3,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BackToTopButton from "@/components/BackToTopButton";
-import BackgroundBlobs from "@/components/BackgroundBlobs";
 import { HeroSection } from "@/sections/HeroSection";
 import { AboutSection } from "@/sections/AboutSection";
 import { SkillsSection } from "@/sections/SkillsSection";
@@ -16,9 +15,8 @@ export default function HomePage() {
   const { loading, profile, skills, projects, education } = useFetchPortfolioData();
 
   return (
-    <div className="relative min-h-screen">
-      <BackgroundBlobs />
-      <Navbar loading={loading} />
+    <div className="relative min-h-screen bg-paper">
+      <Navbar />
 
       <main className="relative z-10">
         <HeroSection profile={profile} />
@@ -34,4 +32,3 @@ export default function HomePage() {
     </div>
   );
 }
-

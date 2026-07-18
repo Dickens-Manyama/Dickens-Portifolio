@@ -30,9 +30,8 @@ export default function SmoothScrollLink({
       onClick={handleClick}
       style={style}
       className={[
-        "relative rounded-lg px-3 py-2 text-sm font-medium transition",
-        active ? "text-white" : "text-slate-300 hover:text-white",
-        active ? "after:absolute after:bottom-0 after:left-3 after:h-0.5 after:w-8 after:rounded-full after:bg-gradient-to-r after:from-indigo-400 after:to-violet-400" : "",
+        "link-sweep relative px-1 py-1 font-display text-sm font-semibold transition-colors",
+        active ? "text-wine" : "text-ink hover:text-wine",
         className,
       ].join(" ")}
     >
@@ -40,4 +39,3 @@ export default function SmoothScrollLink({
     </a>
   );
 }
-

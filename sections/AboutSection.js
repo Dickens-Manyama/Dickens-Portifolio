@@ -2,74 +2,77 @@
 
 import Container from "@/components/Container";
 import Reveal from "@/components/Reveal";
-import { motion } from "framer-motion";
-import { Layers, Sparkles, Wrench } from "lucide-react";
+import SectionHeading from "@/components/SectionHeading";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { Sparkles, Wrench, Layers, Target } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
 
 const iconList = [Sparkles, Wrench, Layers];
 
 export function AboutSection({ profile }) {
+  const [strengthsParent] = useAutoAnimate({ duration: 250 });
+  const strengths = profile?.strengths ?? [];
+
   return (
-    <section id="about" className="relative py-16 md:py-20">
+    <section id="about" className="relative py-20 md:py-28">
       <Container>
-        <div className="grid gap-10 lg:grid-cols-12">
+        <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Reveal>
-              <p className="text-sm font-semibold tracking-wide text-indigo-300">About</p>
-              <h2 className="mt-3 text-3xl font-extrabold text-white md:text-4xl">A hands-on builder</h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-300">
+            <SectionHeading number="01" label="About" title="A hands-on builder" />
+
+            <Reveal delay={0.1}>
+              <p className="mt-6 text-base leading-relaxed text-ink-soft">
                 {profile?.professionalSummary ??
                   "Highly motivated Software Developer and Data Scientist with strong hands-on experience building production-ready systems."}
               </p>
             </Reveal>
 
-            <div className="mt-6">
-              <Reveal delay={0.12}>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-                  <p className="text-sm font-semibold text-white/95">Career Objective</p>
-                  <p className="mt-2 text-slate-300">{profile?.careerObjective ?? "—"}</p>
+            <Reveal delay={0.18}>
+              <div className="mt-8 border-2 border-ink bg-wine p-6 shadow-hard-lime">
+                <div className="flex items-center gap-2">
+                  <Target size={18} className="text-lime" />
+                  <p className="font-display text-sm font-bold uppercase tracking-[0.18em] text-lime">
+                    Career Objective
+                  </p>
                 </div>
-              </Reveal>
-            </div>
+                <p className="mt-3 text-base leading-relaxed text-paper">
+                  {profile?.careerObjective ?? "—"}
+                </p>
+              </div>
+            </Reveal>
           </div>
 
           <div className="lg:col-span-7">
-            <Reveal delay={0.18}>
-              <h3 className="text-lg font-bold text-white/95">Personal strengths</h3>
+            <Reveal delay={0.12}>
+              <h3 className="font-display text-lg font-bold uppercase tracking-wide text-ink">
+                Personal strengths
+              </h3>
             </Reveal>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {(profile?.strengths ?? []).length ? (
-                profile.strengths.map((s, idx) => {
+            <div ref={strengthsParent} className="mt-5 grid gap-4 sm:grid-cols-2">
+              {strengths.length ? (
+                strengths.map((s, idx) => {
                   const Icon = iconList[idx % iconList.length];
                   return (
-                    <Reveal key={s} delay={0.06 + idx * 0.05}>
-                      <motion.div
-                        whileHover={{ y: -4, scale: 1.01 }}
-                        transition={{ duration: 0.2 }}
-                        className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-soft"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/25 via-violet-500/20 to-cyan-400/15 border border-white/10">
-                            <Icon size={18} className="text-indigo-200" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-white/95">{s}</p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              Built for consistency, reliability, and measurable outcomes.
-                            </p>
-                          </div>
+                    <div
+                      key={s}
+                      className="group border-2 border-ink bg-paper p-5 shadow-hard-sm transition-transform duration-200 hover:-translate-y-1 hover:shadow-hard-punch"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-ink bg-lime transition-colors group-hover:bg-punch">
+                          <Icon size={18} className="text-ink transition-colors group-hover:text-paper" />
                         </div>
-                      </motion.div>
-                    </Reveal>
+                        <p className="pt-1.5 text-sm font-semibold leading-snug text-ink">{s}</p>
+                      </div>
+                    </div>
                   );
                 })
               ) : (
                 <>
-                  <SkeletonCard className="h-32" />
-                  <SkeletonCard className="h-32" />
-                  <SkeletonCard className="h-32" />
-                  <SkeletonCard className="h-32" />
+                  <SkeletonCard className="h-28" />
+                  <SkeletonCard className="h-28" />
+                  <SkeletonCard className="h-28" />
+                  <SkeletonCard className="h-28" />
                 </>
               )}
             </div>
@@ -79,4 +82,3 @@ export function AboutSection({ profile }) {
     </section>
   );
 }
-

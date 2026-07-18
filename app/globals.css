@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --paper: #f6f6f2;
+  --lime: #c6ff00;
+  --wine: #7e1241;
+  --punch: #ff006e;
+  --ink: #2b2d42;
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
@@ -11,139 +19,14 @@ html {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 font-sans;
+  @apply bg-paper text-ink font-body antialiased;
   overflow-x: hidden;
   width: 100%;
 }
 
-html.dark body {
-  @apply bg-slate-950 text-slate-100;
-}
-
-html.light {
-  color-scheme: light;
-}
-
-html.dark {
-  color-scheme: dark;
-}
-
-/* Light theme overrides for common dark-first utility classes. */
-html.light .text-white {
-  color: rgb(15 23 42);
-}
-
-html.light .text-white\/95 {
-  color: rgba(15, 23, 42, 0.95);
-}
-
-html.light .text-slate-100 {
-  color: rgb(15 23 42);
-}
-
-html.light .text-slate-200 {
-  color: rgb(51 65 85);
-}
-
-html.light .text-slate-300 {
-  color: rgb(71 85 105);
-}
-
-html.light .text-slate-400 {
-  color: rgb(100 116 139);
-}
-
-html.light .text-indigo-300 {
-  color: rgb(79 70 229);
-}
-
-html.light .bg-white\/5 {
-  background-color: rgba(15, 23, 42, 0.04);
-}
-
-html.light .bg-white\/10 {
-  background-color: rgba(15, 23, 42, 0.08);
-}
-
-html.light .border-white\/10 {
-  border-color: rgba(15, 23, 42, 0.12);
-}
-
-html.light .border-white\/20 {
-  border-color: rgba(15, 23, 42, 0.18);
-}
-
-html.light .bg-slate-950\/25 {
-  background-color: rgba(15, 23, 42, 0.06);
-}
-
-html.light .bg-slate-950\/30 {
-  background-color: rgba(15, 23, 42, 0.08);
-}
-
-html.light .bg-slate-950\/60 {
-  background-color: rgba(248, 250, 252, 0.7);
-}
-
-html.light .bg-slate-950\/70 {
-  background-color: rgba(248, 250, 252, 0.75);
-}
-
-/* Additional light-mode overrides for clearer contrast */
-html.light .text-indigo-200 {
-  color: rgb(67 56 202);
-}
-
-html.light .bg-slate-950\/85 {
-  background-color: rgba(255,255,255,0.96);
-}
-
-html.light .bg-slate-950\/95 {
-  background-color: rgba(255,255,255,0.98);
-}
-
-html.light .border-white\/10 {
-  border-color: rgba(15, 23, 42, 0.06);
-}
-
-html.light .bg-white\/5 {
-  background-color: rgba(15, 23, 42, 0.02);
-}
-
-html.light .bg-white\/10 {
-  background-color: rgba(15, 23, 42, 0.04);
-}
-
-/* Ensure hover/background utilities are visible in light mode */
-html.light .hover\:bg-white\/10:hover,
-html.light .hover\:bg-white\/10:focus,
-html.light .hover\:bg-white\/10:active {
-  background-color: rgba(15, 23, 42, 0.06) !important;
-}
-
-html.light .hover\:bg-white\/5:hover,
-html.light .hover\:bg-white\/5:focus,
-html.light .hover\:bg-white\/5:active {
-  background-color: rgba(15, 23, 42, 0.035) !important;
-}
-
-html.light .hover\:bg-indigo-400\/15:hover,
-html.light .hover\:bg-indigo-400\/15:focus,
-html.light .hover\:bg-indigo-400\/15:active {
-  background-color: rgba(79, 70, 229, 0.12) !important;
-}
-
-/* Stronger text contrast for small/secondary text in light mode */
-html.light .text-slate-300 {
-  color: rgb(63 72 86);
-}
-html.light .text-slate-200 {
-  color: rgb(44 62 80);
-}
-
-/* Improve readability of glass cards */
 *::selection {
-  @apply bg-indigo-500/30;
+  background: var(--lime);
+  color: var(--ink);
 }
 
 *,
@@ -156,6 +39,33 @@ img,
 video {
   max-width: 100%;
   height: auto;
+}
+
+/* Subtle grid texture on the paper background */
+.paper-grid {
+  background-image:
+    linear-gradient(rgba(43, 45, 66, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(43, 45, 66, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Outlined display text used for oversized headings */
+.text-outline {
+  -webkit-text-stroke: 2px var(--ink);
+  color: transparent;
+}
+
+/* Link underline sweep */
+.link-sweep {
+  background-image: linear-gradient(var(--lime), var(--lime));
+  background-repeat: no-repeat;
+  background-size: 0% 38%;
+  background-position: 0 78%;
+  transition: background-size 0.25s ease;
+}
+
+.link-sweep:hover {
+  background-size: 100% 38%;
 }
 
 /* CV mini editor — force left-to-right typing (fixes reversed text / cursor) */
@@ -199,4 +109,3 @@ video {
   margin: 14px 0;
   height: 0;
 }
-
