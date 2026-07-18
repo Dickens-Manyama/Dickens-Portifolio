@@ -16,10 +16,15 @@ export default function SmoothScrollLink({
     (e) => {
       if (!id) return;
       e.preventDefault();
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Close the menu first so the body scroll lock is released, then
+      // scroll on the next frame; otherwise the lock cleanup restores the
+      // old scroll position and cancels the navigation.
       onNavigate?.();
+      requestAnimationFrame(() => {
+        document
+          .getElementById(id)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     },
     [id, onNavigate]
   );

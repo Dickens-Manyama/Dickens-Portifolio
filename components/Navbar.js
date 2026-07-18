@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { SECTIONS } from "@/constants/sections";
@@ -25,10 +25,28 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
+  // Robust scroll lock: overflow:hidden alone is ignored by iOS Safari for
+  // touch scrolling, so we also fix the body in place and restore on close.
+  // useLayoutEffect so the unlock happens synchronously before any deferred
+  // scrollIntoView from a menu link runs.
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.left = "0";
+    style.right = "0";
+    style.width = "100%";
+    style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      style.position = "";
+      style.top = "";
+      style.left = "";
+      style.right = "";
+      style.width = "";
+      style.overflow = "";
+      window.scrollTo(0, scrollY);
     };
   }, [menuOpen]);
 
@@ -75,7 +93,13 @@ export default function Navbar() {
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center border-2 border-ink bg-paper text-ink shadow-hard-sm transition-transform hover:-translate-y-0.5 lg:hidden"
+            className={[
+              "h-10 w-10 items-center justify-center border-2 border-ink bg-paper text-ink shadow-hard-sm transition-transform hover:-translate-y-0.5",
+              // Always visible on small screens; on desktop it appears once
+              // the page is scrolled (or while the menu is open) so the
+              // Admin Login entry stays reachable.
+              menuOpen || scrolled ? "inline-flex" : "inline-flex lg:hidden",
+            ].join(" ")}
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
           >
@@ -91,9 +115,9 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="fixed inset-0 top-16 z-40 flex flex-col bg-paper paper-grid lg:hidden"
+            className="fixed inset-0 top-16 z-40 flex flex-col bg-paper paper-grid"
           >
-            <div className="flex flex-1 flex-col justify-center gap-1 overflow-y-auto px-6 py-6">
+            <div className="flex flex-1 flex-col justify-center gap-1 overflow-y-auto overscroll-contain px-6 py-6">
               {SECTIONS.map((item, idx) => (
                 <motion.div
                   key={item.id}
