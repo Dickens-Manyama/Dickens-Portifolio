@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Container from "@/components/Container";
-import CvWordEditor from "@/components/admin/CvWordEditor";
 import { getClientInfo } from "@/utils/clientInfo";
 import {
   adminLogin,
@@ -31,10 +30,6 @@ import {
   adminCreateAdmin,
   adminUpdateAdmin,
   adminDeleteAdmin,
-  adminGetCvMetadata,
-  adminUploadCv,
-  adminDeleteCv,
-  adminGetCvContent,
   getAdminToken,
   setAdminToken,
   clearAdminToken,
@@ -100,21 +95,7 @@ function toDateLabel(value) {
   return date.toLocaleString();
 }
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Failed to read the selected image."));
-    reader.readAsDataURL(file);
-  });
-}
-
-function getEditableCvFileName(fileName) {
-  const safe = String(fileName || "cv").trim() || "cv";
-  const base = safe.replace(/\.[^.]+$/, "");
-  return `${base}.txt`;
-}
-
+// Resize + JPEG-compress an image so project payloads stay small.
 async function compressImageFileToDataUrl(file) {
   const sourceUrl = URL.createObjectURL(file);
 
@@ -177,6 +158,7 @@ export default function AdminPage() {
     techStack: "",
     githubLink: "",
     liveDemo: "",
+    imageUrl: "",
   });
   const [skillForm, setSkillForm] = useState({ category: "", name: "" });
   const [educationForm, setEducationForm] = useState({
@@ -187,13 +169,6 @@ export default function AdminPage() {
     sortOrder: "",
   });
   const [adminEditor, setAdminEditor] = useState(null);
-  const [profileImageFileName, setProfileImageFileName] = useState("");
-  const [cvMeta, setCvMeta] = useState(null);
-  const [cvEditing, setCvEditing] = useState(false);
-  const [cvEditHtml, setCvEditHtml] = useState("<p></p>");
-  const [cvPreviewing, setCvPreviewing] = useState(false);
-  const [cvFileName, setCvFileName] = useState("");
-  const [selectedCvFile, setSelectedCvFile] = useState(null);
   const [sessionTimeoutMs, setSessionTimeoutMs] = useState(300000);
   const [sessionRemainingMs, setSessionRemainingMs] = useState(300000);
   const [sessionInfo, setSessionInfo] = useState({ isSuperAdmin: false, adminExpiresAt: null, adminEmail: null });
@@ -342,7 +317,6 @@ export default function AdminPage() {
               strengthsText: "",
             }
       );
-          setProfileImageFileName("");
 
       setProjects(
         (projectRows || []).map((p) => ({
@@ -353,12 +327,6 @@ export default function AdminPage() {
       setSkills(skillRows || []);
       setEducation(educationRows || []);
       setContacts(contactRows || []);
-      try {
-        const meta = await adminGetCvMetadata(token);
-        setCvMeta(meta || null);
-      } catch (e) {
-        setCvMeta(null);
-      }
       resetSessionClock(sessionTimeoutMs);
     } catch (err) {
       if (err?.status === 401) {
@@ -420,7 +388,7 @@ export default function AdminPage() {
     setToken(null);
     setSessionRemainingMs(sessionTimeoutMs);
     setInline("login", "success", "Logged out successfully. Returning to your portfolio.");
-    window.setTimeout(() => router.push("/#home"), 700);
+    window.setTimeout(() => router.push("/"), 700);
   }
 
   async function handleProfileSave() {
@@ -438,175 +406,12 @@ export default function AdminPage() {
         ...saved,
         strengthsText: Array.isArray(saved.strengths) ? saved.strengths.join("\n") : "",
       });
-      setProfileImageFileName("");
       setInline("profile", "success", "Profile updated.");
     } catch (err) {
       setInline("profile", "error", err?.message || "Failed to update profile.");
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleProfileImageUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file || !profileForm) return;
-
-    if (!file.type.startsWith("image/")) {
-      setInline("profile-image", "error", "Please choose an image file.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 8 * 1024 * 1024) {
-      setInline("profile-image", "error", "Image must be 8 MB or smaller.");
-      event.target.value = "";
-      return;
-    }
-
-    try {
-      const dataUrl = await compressImageFileToDataUrl(file);
-      setProfileForm((prev) => (prev ? { ...prev, profileImageUrl: dataUrl } : prev));
-      setProfileImageFileName(file.name);
-      setInline("profile-image", "success", "Image ready to save.");
-    } catch (err) {
-      setInline("profile-image", "error", err?.message || "Failed to load image.");
-    } finally {
-      event.target.value = "";
-    }
-  }
-
-  async function handleCvFileSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-
-    if (file.size > 12 * 1024 * 1024) {
-      setInline("profile-cv", "error", "CV must be 12 MB or smaller.");
-      event.target.value = "";
-      return;
-    }
-
-    // Store selected file and wait for explicit upload
-    setSelectedCvFile(file);
-    setCvFileName(file.name);
-    setInline("profile-cv", "success", "CV ready to upload. Click 'Upload CV' to save.");
-    event.target.value = "";
-  }
-
-  async function handleCvUpload() {
-    if (!selectedCvFile) return setInline("profile-cv", "error", "No file selected.");
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-    setLoading(true);
-    try {
-      const dataUrl = await fileToDataUrl(selectedCvFile);
-      const payload = { filename: selectedCvFile.name, contentBase64: dataUrl, mimeType: selectedCvFile.type };
-      const saved = await adminUploadCv(payload, token);
-      setCvMeta(saved || null);
-      setSelectedCvFile(null);
-      setCvFileName("");
-      setInline("profile-cv", "success", "CV uploaded.");
-    } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to upload CV.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCvDelete() {
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-    const confirmed = window.confirm("Delete current CV? This cannot be undone.");
-    if (!confirmed) return;
-    setLoading(true);
-    try {
-      await adminDeleteCv(token);
-      setCvMeta(null);
-      setInline("profile-cv", "success", "CV deleted.");
-    } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to delete CV.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function plainTextToHtml(text) {
-    const safe = String(text || "").trim();
-    if (!safe) return "<p></p>";
-    if (/<[a-z][\s\S]*>/i.test(safe)) return safe;
-    return safe
-      .split(/\n{2,}/)
-      .map((block) => `<p>${block.replace(/\n/g, "<br>")}</p>`)
-      .join("");
-  }
-
-  async function loadCvIntoEditor(viewOnly = false) {
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-    setLoading(true);
-    try {
-      const data = await adminGetCvContent(token);
-      const html = data?.contentHtml || plainTextToHtml(data?.content || "");
-      setCvEditHtml(html);
-      if (viewOnly) {
-        setCvPreviewing(true);
-        setCvEditing(false);
-      } else {
-        setCvEditing(true);
-        setCvPreviewing(false);
-      }
-    } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to open CV.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCvEditOpen() {
-    await loadCvIntoEditor(false);
-  }
-
-  async function handleCvPreviewOpen() {
-    await loadCvIntoEditor(true);
-  }
-
-  async function handleCvSaveEdit(html, format = "docx", fileBaseName) {
-    if (!token) return setInline("profile-cv", "error", "Not signed in.");
-    setLoading(true);
-    try {
-      const fallback = String(cvMeta?.originalName || cvFileName || "Dickens-Manyama-CV")
-        .replace(/\.[^.]+$/, "")
-        .trim();
-      const base = String(fileBaseName || fallback || "Dickens-Manyama-CV")
-        .replace(/[^a-zA-Z0-9._-]/g, "-")
-        .replace(/\.[^.]+$/, "")
-        .slice(0, 120);
-      const ext = format === "doc" ? "docx" : format;
-      const filename = `${base}.${ext}`;
-      const saved = await adminUploadCv(
-        {
-          filename,
-          contentHtml: html,
-          outputFormat: format,
-        },
-        token
-      );
-      setCvMeta(saved || null);
-      setCvEditHtml(html);
-      setCvEditing(false);
-      setCvPreviewing(false);
-      setInline(
-        "profile-cv",
-        "success",
-        `Saved as ${filename}. This file is now used for Download CV on your portfolio.`
-      );
-    } catch (err) {
-      setInline("profile-cv", "error", err?.message || "Failed to save CV.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function closeCvWorkspace() {
-    setCvEditing(false);
-    setCvPreviewing(false);
   }
 
   async function handleProjectSave(project) {
@@ -620,6 +425,7 @@ export default function AdminPage() {
         techStack: project.techStackText,
         githubLink: project.githubLink,
         liveDemo: project.liveDemo,
+        imageUrl: project.imageUrl || "",
       };
       const saved = await adminUpdateProject(project.id, payload, token);
       setProjects((prev) =>
@@ -657,6 +463,7 @@ export default function AdminPage() {
           techStack: projectForm.techStack,
           githubLink: projectForm.githubLink,
           liveDemo: projectForm.liveDemo,
+          imageUrl: projectForm.imageUrl || "",
         },
         token
       );
@@ -664,7 +471,7 @@ export default function AdminPage() {
         ...prev,
         { ...created, techStackText: mapTechStackToText(created.techStack) },
       ]);
-      setProjectForm({ title: "", description: "", techStack: "", githubLink: "", liveDemo: "" });
+      setProjectForm({ title: "", description: "", techStack: "", githubLink: "", liveDemo: "", imageUrl: "" });
       setInline("projects", "success", "Project created.");
     } catch (err) {
       setInline("projects", "error", err?.message || "Failed to create project.");
@@ -685,6 +492,29 @@ export default function AdminPage() {
       setInline("projects", "error", err?.message || "Failed to delete project.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleProjectImagePick(event, inlineKey, onReady) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setInline(inlineKey, "error", "Please choose an image file.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setInline(inlineKey, "error", "Image must be 8 MB or smaller.");
+      return;
+    }
+
+    try {
+      const dataUrl = await compressImageFileToDataUrl(file);
+      onReady(dataUrl);
+      setInline(inlineKey, "success", "Image ready. Click Save / Create to store it.");
+    } catch (err) {
+      setInline(inlineKey, "error", err?.message || "Failed to load image.");
     }
   }
 
@@ -1149,7 +979,7 @@ export default function AdminPage() {
               {activeTab === "Profile" && profileForm ? (
                 <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-soft sm:p-6">
                   <h2 className="text-lg font-semibold text-white/95">Profile</h2>
-                  <div className="mt-5 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
+                  <div className="mt-5 grid min-w-0 gap-6">
                     <div className="grid min-w-0 gap-4 md:grid-cols-2 [&_input]:max-w-full [&_label]:min-w-0 [&_textarea]:max-w-full">
                       <label className="text-sm text-slate-300">
                         Name
@@ -1245,106 +1075,6 @@ export default function AdminPage() {
                         />
                       </label>
                     </div>
-
-                    <aside className="mx-auto min-w-0 w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950/25 p-4 shadow-soft sm:p-5 xl:sticky xl:top-6">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                        <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                            Profile image
-                          </p>
-                          <h3 className="mt-2 break-words text-base font-semibold text-white/95">
-                            Upload from device
-                          </h3>
-                        </div>
-                        <div className="shrink-0 self-start rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
-                          Stored in DB
-                        </div>
-                      </div>
-
-                      <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/35 p-3">
-                        <div className="relative aspect-square w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-slate-950/40">
-                          {profileForm.profileImageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={profileForm.profileImageUrl}
-                              alt="Profile preview"
-                              className="h-full w-full object-contain"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-slate-400">
-                              No image selected yet.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-5 space-y-3">
-                        <InlineAlert message={inlineMessages["profile-image"]} />
-                        <label className="block min-w-0 text-sm text-slate-300">
-                          Choose image from device
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleProfileImageUpload}
-                            className="mt-2 block w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
-                          />
-                        </label>
-
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                          <p className="font-semibold text-white/95">Selected file</p>
-                          <p className="mt-1 break-all text-xs text-slate-400">
-                            {profileImageFileName || "No file selected"}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                          <p className="font-semibold text-white/95">Curriculum Vitae (CV)</p>
-                          <p className="mt-2 break-words text-xs text-slate-400">
-                            Upload a CV file or use View / Edit to open the built-in Word-style editor with formatting and multi-format save.
-                          </p>
-
-                          <div className="mt-3 flex flex-col gap-3">
-                            <input
-                              type="file"
-                              accept=".pdf,.doc,.docx,.txt,.md"
-                              onChange={handleCvFileSelect}
-                              className="block w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
-                            />
-                            {selectedCvFile ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="min-w-0 break-all text-sm text-slate-200">
-                                  {selectedCvFile.name}
-                                </span>
-                                <button onClick={handleCvUpload} className="rounded-xl border border-white/10 bg-indigo-600/10 px-3 py-1 text-xs text-indigo-200 hover:bg-indigo-600/20">Upload CV</button>
-                                <button onClick={() => { setSelectedCvFile(null); setCvFileName(""); clearInline("profile-cv"); }} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Cancel</button>
-                              </div>
-                            ) : null}
-                          </div>
-
-                          <InlineAlert message={inlineMessages["profile-cv"]} />
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            {cvMeta?.url ? (
-                              <button onClick={handleCvPreviewOpen} className="text-sm text-indigo-300 underline">
-                                View current CV
-                              </button>
-                            ) : (
-                              <span className="text-xs text-slate-400">No CV uploaded</span>
-                            )}
-
-                            {cvMeta ? (
-                              <>
-                                <button onClick={handleCvEditOpen} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10">Edit</button>
-                                <button onClick={handleCvDelete} className="rounded-xl border border-white/10 bg-rose-600/10 px-3 py-1 text-xs text-rose-200 hover:bg-rose-600/20">Delete</button>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        <p className="text-xs leading-relaxed text-slate-400">
-                          The chosen image is resized before saving so the profile update stays small.
-                        </p>
-                      </div>
-                    </aside>
                   </div>
 
                   <div className="mt-5">
@@ -1413,6 +1143,38 @@ export default function AdminPage() {
                         placeholder="https://..."
                       />
                     </label>
+                    <div className="text-sm text-slate-300 lg:col-span-2">
+                      Project image (optional)
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        {projectForm.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={projectForm.imageUrl}
+                            alt="New project preview"
+                            className="h-16 w-24 rounded-lg border border-white/10 object-cover"
+                          />
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            handleProjectImagePick(e, "projects", (dataUrl) =>
+                              setProjectForm((prev) => ({ ...prev, imageUrl: dataUrl }))
+                            )
+                          }
+                          className="block min-w-0 max-w-full flex-1 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                        />
+                        {projectForm.imageUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setProjectForm((prev) => ({ ...prev, imageUrl: "" }))}
+                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10"
+                          >
+                            Remove image
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                     <div className="lg:col-span-2 flex justify-end">
                       <button
                         type="submit"
@@ -1509,6 +1271,50 @@ export default function AdminPage() {
                               className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-white"
                             />
                           </label>
+                          <div className="text-sm text-slate-300 md:col-span-2">
+                            Project image (optional)
+                            <div className="mt-2 flex flex-wrap items-center gap-3">
+                              {project.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={project.imageUrl}
+                                  alt={`${project.title} preview`}
+                                  className="h-16 w-24 rounded-lg border border-white/10 object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs text-slate-500">No image</span>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) =>
+                                  handleProjectImagePick(e, `project-${project.id}`, (dataUrl) =>
+                                    setProjects((prev) =>
+                                      prev.map((p) =>
+                                        p.id === project.id ? { ...p, imageUrl: dataUrl } : p
+                                      )
+                                    )
+                                  )
+                                }
+                                className="block min-w-0 max-w-full flex-1 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-200 file:mr-3 file:max-w-[55%] file:truncate file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/15"
+                              />
+                              {project.imageUrl ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setProjects((prev) =>
+                                      prev.map((p) =>
+                                        p.id === project.id ? { ...p, imageUrl: "" } : p
+                                      )
+                                    )
+                                  }
+                                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200 hover:bg-white/10"
+                                >
+                                  Remove image
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
                           <button
@@ -2234,16 +2040,6 @@ export default function AdminPage() {
           )}
         </div>
       </Container>
-      <CvWordEditor
-        open={cvEditing || cvPreviewing}
-        mode={cvPreviewing ? "view" : "edit"}
-        title={cvPreviewing ? "View CV" : "Edit CV"}
-        initialHtml={cvEditHtml}
-        defaultSaveName={cvMeta?.originalName || cvFileName || "Dickens-Manyama-CV"}
-        loading={loading}
-        onClose={closeCvWorkspace}
-        onSave={handleCvSaveEdit}
-      />
     </div>
   );
 }

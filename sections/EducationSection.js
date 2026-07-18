@@ -1,77 +1,74 @@
 "use client";
 
-import Container from "@/components/Container";
 import SectionHeading from "@/components/SectionHeading";
-import { motion } from "framer-motion";
-import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { GraduationCap } from "lucide-react";
 import { SkeletonCard } from "@/components/SkeletonCard";
+import { ArrowUpRight } from "lucide-react";
+
+function EducationRow({ item }) {
+  return (
+    <li className="group relative mb-12 grid gap-4 transition-all sm:grid-cols-8 sm:gap-8 md:gap-4 lg:hover:!opacity-100 lg:group-hover/list:opacity-50">
+      <div
+        className="absolute -inset-x-4 -inset-y-4 z-0 hidden rounded-md transition motion-reduce:transition-none lg:-inset-x-6 lg:block lg:group-hover:bg-slate-800/50 lg:group-hover:shadow-[inset_0_1px_0_0_rgba(148,163,184,0.1)] lg:group-hover:drop-shadow-lg"
+        aria-hidden="true"
+      />
+
+      <header className="z-10 mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:col-span-2">
+        {item.statusTag || "Completed"}
+      </header>
+
+      <div className="z-10 sm:col-span-6">
+        <h3 className="font-medium leading-snug text-slate-200 group-hover:text-teal-300">
+          {item.institution}
+        </h3>
+        <p className="mt-1 text-sm font-medium text-slate-400">{item.program}</p>
+        {item.description ? (
+          <p className="mt-2 text-sm leading-normal text-slate-400">{item.description}</p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
 
 export function EducationSection({ education, loading }) {
-  const [listParent] = useAutoAnimate({ duration: 250 });
   const items = education ?? [];
 
   return (
-    <section id="education" className="border-y-2 border-ink bg-wine py-20 md:py-28">
-      <Container>
-        <div className="flex items-baseline gap-4">
-          <span className="font-display text-sm font-bold tracking-[0.2em] text-lime">04</span>
-          <span className="font-display text-sm font-bold uppercase tracking-[0.2em] text-lime">
-            Education
-          </span>
-          <span className="h-px flex-1 bg-paper/25" aria-hidden="true" />
-        </div>
-        <h2 className="mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight text-paper md:text-5xl">
-          Learning, building, iterating
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-paper/75">
-          Data science training combined with hands-on software development to deliver end-to-end,
-          production-ready work.
-        </p>
+    <section id="education" className="mb-16 scroll-mt-16 md:mb-24 lg:mb-36 lg:scroll-mt-24">
+      <SectionHeading label="Education" />
 
-        <div ref={listParent} className="mt-12 space-y-0">
-          {loading ? (
-            <div className="space-y-4">
-              {new Array(3).fill(0).map((_, idx) => (
-                <SkeletonCard key={idx} className="h-24 !border-paper/25 !bg-paper/10" />
-              ))}
-            </div>
-          ) : (
-            items.map((item, idx) => (
-              <motion.div
-                key={`${item.institution}-${item.program}-${idx}`}
-                initial={{ opacity: 0, x: -16 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.45, delay: idx * 0.06 }}
-                className="group grid gap-4 border-b-2 border-paper/20 py-6 transition-colors first:border-t-2 hover:bg-paper/5 lg:grid-cols-12 lg:items-center lg:px-4"
-              >
-                <div className="flex items-start gap-4 lg:col-span-6 lg:items-center">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-paper bg-lime text-ink transition-transform group-hover:rotate-6">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-display text-lg font-bold leading-snug text-paper">
-                      {item.institution}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-lime">{item.program}</p>
-                  </div>
-                </div>
-                <div className="lg:col-span-4">
-                  <p className="text-sm leading-relaxed text-paper/75">{item.description}</p>
-                </div>
-                <div className="lg:col-span-2 lg:text-right">
-                  {item.statusTag ? (
-                    <span className="inline-block border-2 border-lime px-3 py-1 font-display text-xs font-bold uppercase tracking-wide text-lime">
-                      {item.statusTag}
-                    </span>
-                  ) : null}
-                </div>
-              </motion.div>
-            ))
-          )}
+      {loading ? (
+        <div className="grid gap-4">
+          {new Array(3).fill(0).map((_, idx) => (
+            <SkeletonCard key={idx} className="h-24" />
+          ))}
         </div>
-      </Container>
+      ) : (
+        <>
+          <ul className="group/list">
+            {items.map((item, idx) => (
+              <EducationRow key={`${item.institution}-${item.program}-${idx}`} item={item} />
+            ))}
+          </ul>
+
+          <div className="mt-12">
+            <a
+              href="/Dickens_Manyama_CV.pdf"
+              target="_blank"
+              rel="noreferrer"
+              className="group/resume inline-flex items-baseline font-semibold leading-tight text-slate-200 transition-colors hover:text-teal-300"
+            >
+              <span className="border-b border-transparent pb-px transition group-hover/resume:border-teal-300">
+                View Full Résumé
+              </span>
+              <ArrowUpRight
+                size={16}
+                className="ml-1 shrink-0 -translate-y-px transition-transform group-hover/resume:-translate-y-1 group-hover/resume:translate-x-1 motion-reduce:transition-none"
+                aria-hidden="true"
+              />
+            </a>
+          </div>
+        </>
+      )}
     </section>
   );
 }

@@ -1,25 +1,11 @@
 "use client";
 
-import Reveal from "@/components/Reveal";
-
-export default function SectionHeading({ number, label, title, description }) {
+// Uppercase section header: sticky with a blurred backdrop on mobile,
+// a plain static heading on desktop.
+export default function SectionHeading({ label }) {
   return (
-    <Reveal>
-      <div className="flex items-baseline gap-4">
-        <span className="font-display text-sm font-bold tracking-[0.2em] text-punch">
-          {number}
-        </span>
-        <span className="font-display text-sm font-bold uppercase tracking-[0.2em] text-wine">
-          {label}
-        </span>
-        <span className="h-px flex-1 bg-ink/20" aria-hidden="true" />
-      </div>
-      <h2 className="mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink md:text-5xl">
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-soft">{description}</p>
-      ) : null}
-    </Reveal>
+    <div className="sticky top-0 z-20 -mx-6 mb-4 w-screen bg-slate-900/75 px-6 py-5 backdrop-blur md:-mx-12 md:px-12 lg:static lg:mx-0 lg:mb-8 lg:w-full lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">
+      <h2 className="text-sm font-bold uppercase tracking-widest text-slate-200">{label}</h2>
+    </div>
   );
 }

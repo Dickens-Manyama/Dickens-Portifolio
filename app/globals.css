@@ -4,29 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --paper: #f6f6f2;
-  --lime: #c6ff00;
-  --wine: #7e1241;
-  --punch: #ff006e;
-  --ink: #2b2d42;
-}
-
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
-  width: 100%;
+  /* overflow-x: hidden would break position: sticky on the left column;
+     clip prevents horizontal overflow without creating a scroll container. */
+  overflow-x: clip;
 }
 
 body {
-  @apply bg-paper text-ink font-body antialiased;
-  overflow-x: hidden;
-  width: 100%;
+  @apply bg-slate-900 font-sans text-slate-400 antialiased;
+  overflow-x: clip;
 }
 
 *::selection {
-  background: var(--lime);
-  color: var(--ink);
+  background: #5eead4;
+  color: #0f172a;
 }
 
 *,
@@ -41,71 +33,25 @@ video {
   height: auto;
 }
 
-/* Subtle grid texture on the paper background */
-.paper-grid {
-  background-image:
-    linear-gradient(rgba(43, 45, 66, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(43, 45, 66, 0.05) 1px, transparent 1px);
-  background-size: 44px 44px;
+/* Thin dark scrollbar to match the slate theme */
+::-webkit-scrollbar {
+  width: 10px;
 }
 
-/* Outlined display text used for oversized headings */
-.text-outline {
-  -webkit-text-stroke: 2px var(--ink);
-  color: transparent;
+::-webkit-scrollbar-track {
+  background: #0f172a;
 }
 
-/* Link underline sweep */
-.link-sweep {
-  background-image: linear-gradient(var(--lime), var(--lime));
-  background-repeat: no-repeat;
-  background-size: 0% 38%;
-  background-position: 0 78%;
-  transition: background-size 0.25s ease;
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 6px;
 }
 
-.link-sweep:hover {
-  background-size: 100% 38%;
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
-/* CV mini editor — force left-to-right typing (fixes reversed text / cursor) */
-.cv-word-editor,
-.cv-word-editor * {
-  direction: ltr !important;
-  unicode-bidi: normal;
-  text-align: inherit;
-}
-
-.cv-word-editor ul {
-  list-style-type: disc;
-  padding-left: 1.5rem;
-  margin: 0.5rem 0;
-}
-
-.cv-word-editor ol {
-  list-style-type: decimal;
-  padding-left: 1.5rem;
-  margin: 0.5rem 0;
-}
-
-.cv-word-editor li {
-  display: list-item;
-  margin: 0.15rem 0;
-}
-
-.cv-document-page {
-  font-family: Calibri, "Segoe UI", Arial, sans-serif;
-}
-
-.cv-document-body a {
-  color: #185abd;
-  text-decoration: underline;
-}
-
-.cv-word-editor hr,
-.cv-document-body hr {
-  border: none;
-  border-top: 3px solid #185abd;
-  margin: 14px 0;
-  height: 0;
+:focus-visible {
+  outline: 2px solid #5eead4;
+  outline-offset: 2px;
 }

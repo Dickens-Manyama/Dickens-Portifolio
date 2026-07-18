@@ -1,15 +1,9 @@
 import "./globals.css";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 
-const displayFont = Space_Grotesk({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
-});
-
-const bodyFont = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-inter",
 });
 
 export const metadata = {
@@ -22,10 +16,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <body>
-        {children}
-      </body>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body>{children}</body>
     </html>
   );
 }

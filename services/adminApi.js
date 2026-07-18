@@ -164,22 +164,6 @@ export async function adminUpdateAdmin(id, payload, token) {
   return adminFetch(`/api/admin/admins/${id}`, { method: "PUT", body: payload, token });
 }
 
-export async function adminGetCvMetadata(token) {
-  return adminFetch("/api/admin/cv", { token });
-}
-
-export async function adminUploadCv(payload, token) {
-  return adminFetch("/api/admin/cv", { method: "POST", body: payload, token });
-}
-
-export async function adminDeleteCv(token) {
-  return adminFetch("/api/admin/cv", { method: "DELETE", token });
-}
-
-export async function adminGetCvContent(token) {
-  return adminFetch("/api/admin/cv/content", { token });
-}
-
 export async function adminGetAuditLogs(token, params = {}) {
   const query = new URLSearchParams();
   if (params.skip !== undefined) query.append("skip", params.skip);
