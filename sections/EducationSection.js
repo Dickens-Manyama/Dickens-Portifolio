@@ -2,7 +2,6 @@
 
 import SectionHeading from "@/components/SectionHeading";
 import { SkeletonCard } from "@/components/SkeletonCard";
-import { ArrowUpRight } from "lucide-react";
 
 function EducationRow({ item }) {
   return (
@@ -49,24 +48,6 @@ export function EducationSection({ education, loading }) {
               <EducationRow key={`${item.institution}-${item.program}-${idx}`} item={item} />
             ))}
           </ul>
-
-          <div className="mt-12">
-            <a
-              href="/Dickens_Manyama_CV.pdf"
-              target="_blank"
-              rel="noreferrer"
-              className="group/resume inline-flex items-baseline font-semibold leading-tight text-slate-200 transition-colors hover:text-teal-300"
-            >
-              <span className="border-b border-transparent pb-px transition group-hover/resume:border-teal-300">
-                View Full Résumé
-              </span>
-              <ArrowUpRight
-                size={16}
-                className="ml-1 shrink-0 -translate-y-px transition-transform group-hover/resume:-translate-y-1 group-hover/resume:translate-x-1 motion-reduce:transition-none"
-                aria-hidden="true"
-              />
-            </a>
-          </div>
         </>
       )}
     </section>
